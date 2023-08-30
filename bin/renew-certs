@@ -1,4 +1,4 @@
-#!/usr/bin/env -S scala-cli shebang
+#!/usr/bin/env -S scala-cli shebang --server=false
 
 //> using scala "3.3.0"
 //> using dep "com.mchange::mchange-sysadmin-scala:0.0.1"
@@ -6,14 +6,24 @@
 // for debugging
 // tail -f /var/log/letsencrypt/letsencrypt.log
 
+// when we run this noninteractively, we do it in a systemd timer,
+// on an odd day with timing blurred by AccuracySec=3hr
+//
+// so there's no need for a random sleep to prevent a
+// horde of simultaneous renewals
+
 import scala.collection.*
 import com.mchange.sysadmin.*
+
+def itRan( run : Step.Run.Completed ) : Boolean =
+  val stdout = run.result.stepOut
+  stdout.contains("Certificate not yet due") || stdout.contains("Renewing an existing certificate")
 
 val task = new Task:
   val name = "Renew certs"
   val sequential = List(
     Step.Exec("Stop nginx", List("systemctl", "stop", "nginx")),
-    Step.Exec("Renew certs", List("certbot", "renew", "--standalone"), isSuccess = _ => true), // it's okay if some certs fail
+    Step.Exec("Renew certs", List("certbot", "renew", "--standalone", "--no-random-sleep-on-renew"), isSuccess = itRan),
   )
   val bestAttemptCleanups = List(
     Step.Exec("Restart nginx", List("systemctl","restart","nginx"))

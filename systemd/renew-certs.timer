@@ -1,0 +1,21 @@
+[Unit]
+Description=Schedule monthly renewal of letsencrypt certs
+
+[Timer]
+# Execute job if it missed a run due to machine being off
+Persistent=true
+
+# let's do this on the fifth of every month, rather than first or last day
+# at 3am, plus or minus 3hrs
+OnCalendar=*-*-05 03:00:00
+AccuracySec=3hr
+
+#File describing job to execute
+Unit=renew-certs.service
+
+[Install]
+WantedBy=timers.target
+
+# See e.g. https://opensource.com/article/20/7/systemd-timers
+#          https://fedoramagazine.org/systemd-timers-for-scheduling-tasks/
+	   
