@@ -1,0 +1,25 @@
+#!/usr/bin/env -S scala-cli shebang
+
+//> using scala "3.3.0"
+//> using dep "com.mchange::mchange-sysadmin-scala:0.0.1"
+
+// for debugging
+// tail -f /var/log/letsencrypt/letsencrypt.log
+
+import scala.collection.*
+import com.mchange.sysadmin.*
+
+val task = new Task:
+  val name = "Renew certs"
+  val sequential = List(
+    Step.Exec("Stop nginx", List("systemctl", "stop", "nginx")),
+    Step.Exec("Renew certs", List("certbot", "renew", "--standalone"), isSuccess = _ => true), // it's okay if some certs fail
+  )
+  val bestAttemptCleanups = List(
+    Step.Exec("Restart nginx", List("systemctl","restart","nginx"))
+  )
+
+def writeSubject( run : Task.Run ) : String = s"Sysadmin task: ${task.name}"
+
+val taskRunner = TaskRunner.default(from="sysadmin@mchange.com",to="sysadmin@mchange.com")
+taskRunner.runAndReport(task)

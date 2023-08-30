@@ -1,0 +1,50 @@
+#!/usr/bin/env -S scala-cli shebang
+
+//> using scala "3.3.0"
+//> using dep "com.minosiants::pencil:2.1.0"
+//> using dep "org.typelevel::log4cats-core:2.6.0"
+//> using dep "org.typelevel::log4cats-slf4j:2.6.0"
+//> using dep "org.slf4j:slf4j-simple:2.0.7"
+
+
+import pencil.*
+import pencil.data.*
+import pencil.syntax.*
+import pencil.protocol.*
+import cats.effect.{ExitCode,IO,IOApp}
+import fs2.io.net.tls.TLSContext
+import fs2.io.net.{Network, Socket}
+import com.comcast.ip4s.{Host, Port, SocketAddress}
+import org.typelevel.log4cats.slf4j.Slf4jLogger
+
+object Mailer extends IOApp, LiteralsSyntax:
+  val logger = Slf4jLogger.getLogger[IO]
+
+  val taskName = "Big task"
+  val message ="This is the text of my message."
+  val email = Email.text( from"SYSADMIN <sysadmin@mchange.com>", to"sysadmin@mchange.com", Subject(s"SYSADMIN TASK: ${taskName}"), Body.Ascii(message))
+
+  override def run(args: List[String]): IO[ExitCode] =
+    val credentials = Credentials(
+      Username(sys.env("SMTP_USER")),
+      Password(sys.env("SMTP_PASSWORD"))
+    )
+    val action = for {
+      tls <- Network[IO].tlsContext.system
+      client = Client[IO](SocketAddress(Host.fromString(sys.env("SMTP_HOST")).get, Port.fromString(sys.env("SMTP_PORT")).get), Some(credentials))(tls,logger)
+      response <- client.send(email)
+    } yield response
+    
+    action.attempt
+      .map:
+        case Right(replies) =>
+          println(replies)
+          ExitCode.Success
+        case Left(error) =>
+          error match
+            case e: Error => logger.error("An error occurred: " + e.toString) // expected to see via stderr, not seeing
+            case e: Throwable => logger.error(e)("An exception occurred.")    // expected to see via stderr, not seeing
+          ExitCode.Error
+
+
+Mailer.main(Array.empty)

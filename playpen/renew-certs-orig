@@ -1,0 +1,103 @@
+#!/usr/bin/env -S scala-cli shebang
+
+//> using scala "3.3.0"
+//> using dep "com.minosiants::pencil:2.1.0"
+//> using dep "com.lihaoyi::os-lib:0.9.1"
+
+
+// for debugging
+// tail -f /var/log/letsencrypt/letsencrypt.log
+
+import scala.collection.*
+import scala.util.control.NonFatal
+
+val environment = immutable.Map(
+  "PATH" -> "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/var/lib/snapd/snap/bin:/root/bin"
+)
+
+def exitCodeIsZero(run : StepRun) : Boolean = run.exitCode == 0
+
+case class Step( stepName : String, parsedCommand : List[String], workingDirectory : os.Path = os.pwd, environment : immutable.Map[String,String] = sys.env, isSuccess : StepRun => Boolean = exitCodeIsZero )
+
+object StepRun:
+  def apply( step : Step ) : StepRun = StepRun( step.stepName, step.parsedCommand, step.workingDirectory, step.environment, step.isSuccess )
+  def apply( stepName : String, parsedCommand : List[String], workingDirectory : os.Path, environment : immutable.Map[String,String], isSuccess : StepRun => Boolean ) : StepRun =
+    val result = os.proc(parsedCommand).call( cwd = workingDirectory, env = environment, check = false, stdin = os.Pipe, stderr = os.Pipe )
+    StepRun( stepName, parsedCommand, workingDirectory, environment, isSuccess, result.exitCode, result.out.trim(), result.err.trim() )
+case class StepRun private ( stepName : String, parsedCommand : List[String], workingDirectory : os.Path, environment : Map[String,String], isSuccess : StepRun => Boolean, exitCode: Int, stepOut : String, stepErr : String ):
+  def success : Boolean = isSuccess(this)
+
+val sequential = List(
+  Step("Stop nginx", List("systemctl", "stop", "nginx"), environment = environment),
+  Step("Renew certs", List("certbot", "renew", "-n", "--standalone", "--dry-run"), environment = environment, isSuccess = _ => true),
+)
+
+val tryOnceCleanup = List(
+  Step("Restart nginx", List("systemctl","restart","nginx"), environment = environment)
+)
+
+def stepMessage( run : StepRun ) : String =
+  s"""|----------------------------------
+      | ${run.stepName}
+      |----------------------------------
+      | Parsed command: ${run.parsedCommand}
+      | Environment: ${run.environment}
+      | Exit Code: ${run.exitCode}
+      | Succeeded? ${run.success}
+      |
+      | stdout:
+      |${run.stepOut}
+      |
+      | stderr:
+      |${run.stepErr}
+      |----------------------------------""".stripMargin.trim
+
+val taskName = "renew-certs"
+
+def runSequential = sequential.foldLeft(Tuple2(true,"")): ( accum, next ) =>
+  if accum(0) then
+    val nextRun = StepRun(next)
+    (nextRun.success, accum(1) + "\n\n" + stepMessage(nextRun))
+  else (accum(0), accum(1) + "\n\n" + s"Skipped step: ${next.stepName}")
+
+def runCleanups = tryOnceCleanup.foldLeft(""): (accum, next) =>
+  val run = StepRun(next)
+  accum + "\n\n" + stepMessage(run)
+
+def fullStackTrace(t:Throwable) : String =
+  val sw = new java.io.StringWriter()
+  t.printStackTrace(new java.io.PrintWriter(sw))
+  sw.toString()
+
+def safeRunSequential =
+  try
+    runSequential
+  catch
+    case NonFatal(t) => (false, fullStackTrace(t))
+
+def safeRunCleanups =
+  try
+    runCleanups
+  catch
+    case NonFatal(t) => fullStackTrace(t)
+
+val out =
+  val sequentialResult = safeRunSequential
+  val cleanupResult    = safeRunCleanups
+    s"""|==================================
+        | OPERATION: ${taskName}
+        |==================================
+        |
+        | Succeeded overall? ${sequentialResult(0)}
+        |
+        |${sequentialResult(1).trim()}
+        |
+        | Cleanups:
+        |${cleanupResult.trim()}
+        |==================================""".stripMargin.trim
+
+println(out)
+
+
+
+
