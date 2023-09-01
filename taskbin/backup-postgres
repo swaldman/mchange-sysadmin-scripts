@@ -1,0 +1,98 @@
+#!/usr/bin/env -S scala-cli shebang --server=false
+
+//> using scala "3.3.0"
+//> using dep "com.mchange::mchange-sysadmin-scala:0.0.2-SNAPSHOT"
+//> using dep "com.lihaoyi::os-lib:0.9.1"
+
+import scala.collection.*
+import com.mchange.sysadmin.*
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
+
+if args.length != 2 then
+  System.err.println("Usage: backup-postgres <hostname-or-other-discriminator> <maybe-rclone-base-destpath>")
+  System.exit(1)
+
+val hname    = args(0)
+val destpath = args(1).reverse.dropWhile( _ == '/' ).reverse // no trailing slashes!
+
+val isRcloneDest = destpath.contains(':')
+val backupFileName = s"${hname}-pgdumpall-${ISO_LOCAL_DATE.format(LocalDate.now())}"
+
+val fullDestPath = s"${destpath}/${hname}"
+
+val task = new Task:
+
+  case class CarryForward( tmpDir : os.Path, backupFile : Option[os.Path] )
+
+  // sequential
+  val EnsureRcloneIfNecessary =
+    def action( prior : Option[Step.Run.Completed], thisStep : Step.Arbitrary ) = prior.flatMap( _.result.carryForward ) match
+      case None if isRcloneDest =>
+        Step.arbitraryExec( prior, thisStep, List("rclone", "--version") )
+      case None if !isRcloneDest =>
+        Step.Result.empty.copy( exitCode = Some(0) )
+      case other =>
+        throw new Exception( s"Found unexpected carryforward in EnsureRcloneIfNecessary step: ${other}. Aborting." )
+    Step.Arbitrary("Create Temp Dir", action, Step.exitCodeIsZero)
+
+  val CreateTempDir =
+    def action( prior : Option[Step.Run.Completed], thisStep : Step.Arbitrary ) = prior.flatMap( _.result.carryForward ) match
+      case None  => new Step.Result( None, "", "", Some( CarryForward(os.temp.dir(), None) ) )
+      case other => throw new Exception( s"Found unexpected carryforward in CreateTempDir step: ${other}. Aborting." )
+    Step.Arbitrary("Create Temp Dir", action, Step.carryForwardNonEmpty)
+    
+  val PerformBackup =
+    def action( prior : Option[Step.Run.Completed], thisStep : Step.Arbitrary ) = prior.flatMap( _.result.carryForward ) match
+      case Some( CarryForward( tmpDir, None ) ) =>
+        val backupFile = tmpDir / backupFileName
+        val parsedCommand = List("postgres-dump-all-to-file", backupFile.toString)        
+        def carryForward( prior : Option[Step.Run.Completed], exitCode : Int, stepIn : String, stepOut : String ) = Some(CarryForward(tmpDir,Some(backupFile)))
+        Step.arbitraryExec( prior, thisStep, parsedCommand, carryForward )
+      case other => throw new Exception( s"Unexpected carryforward to PerformBackup: ${other}. Aborting." )
+    Step.Arbitrary("Perform Postgres Backup", action, Step.exitCodeIsZeroAndCarryForwardNonEmpty)
+    
+  val CopyBackupToStorage =
+    def action( prior : Option[Step.Run.Completed], thisStep : Step.Arbitrary ) = prior.flatMap( _.result.carryForward ) match
+      case prev @ Some( CarryForward( tmpDir, Some( backupFile ) ) ) if isRcloneDest =>
+        val tmpResult = Step.arbitraryExec( prior, thisStep, List("rclone","mkdir",fullDestPath) )
+        if tmpResult.exitCode == Some(0) then
+          def carryForward( prior : Option[Step.Run.Completed], exitCode : Int, stepIn : String, stepOut : String ) = prev
+          Step.arbitraryExec( prior, thisStep, List("rclone","copy",backupFile.toString,fullDestPath ), carryForward )
+        else
+          tmpResult
+      case prev @ Some( CarryForward( tmpDir, Some( backupFile ) ) ) if !isRcloneDest =>
+        val tmpResult = Step.arbitraryExec( prior, thisStep, List("mkdir","-p",fullDestPath) )
+        if tmpResult.exitCode == Some(0) then
+          def carryForward( prior : Option[Step.Run.Completed], exitCode : Int, stepIn : String, stepOut : String ) = prev
+          Step.arbitraryExec( prior, thisStep, List("cp",backupFile.toString,fullDestPath ), carryForward )
+        else
+          tmpResult
+      case other => throw new Exception( s"Unexpected carryforward to CopyBackupToStorage: ${other}. Aborting." )
+    Step.Arbitrary("Copy backup to storage", action, Step.exitCodeIsZeroAndCarryForwardNonEmpty)
+
+  // cleanups
+  val RemoveLocalBackup =
+    def action( prior : Option[Step.Run.Completed], thisStep : Step.Arbitrary ) = prior.flatMap( _.result.carryForward ) match
+      case Some( CarryForward( tmpDir, Some( backupFile ) ) ) =>
+        os.remove( backupFile )
+        Step.Result.empty
+      case other => throw new Exception( s"Unexpected carryforward to RemoveLocalBackup: ${other}. Aborting." )
+    Step.Arbitrary("Remove temporary local backup.", action, Step.stepErrIsEmpty)
+  
+  val name = "Backup postgres, all databases"
+  val sequential = List(
+    EnsureRcloneIfNecessary,
+    CreateTempDir,
+    PerformBackup,
+    CopyBackupToStorage,
+  )
+  val bestAttemptCleanups = List(
+    RemoveLocalBackup
+  )
+
+end task
+  
+val taskRunner = TaskRunner.default(from="sysadmin@mchange.com",to="sysadmin@mchange.com")
+taskRunner.runAndReport(task)
+
