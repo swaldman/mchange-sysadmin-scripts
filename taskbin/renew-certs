@@ -29,7 +29,5 @@ val task = new Task:
     Step.Exec("Restart nginx", List("systemctl","restart","nginx"))
   )
 
-def writeSubject( run : Task.Run ) : String = s"Sysadmin task: ${task.name}"
-
 val taskRunner = TaskRunner.default(from="sysadmin@mchange.com",to="sysadmin@mchange.com")
 taskRunner.runAndReport(task)
