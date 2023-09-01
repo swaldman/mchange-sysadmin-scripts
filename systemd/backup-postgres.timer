@@ -1,0 +1,17 @@
+[Unit]
+Description=schedule a weekly postgres backup
+
+[Timer]
+# Execute job if it missed a run due to machine being off
+Persistent=true
+OnCalendar=weekly
+
+#File describing job to execute
+Unit=backup-postgres.service
+
+[Install]
+WantedBy=timers.target
+
+# See e.g. https://opensource.com/article/20/7/systemd-timers
+#          https://fedoramagazine.org/systemd-timers-for-scheduling-tasks/
+	   

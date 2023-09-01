@@ -1,5 +1,5 @@
 [Unit]
-Description=A service to renew letsencrypt certificates
+Description=service to renew letsencrypt certificates
 
 [Service]
 Type=simple

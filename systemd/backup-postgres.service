@@ -1,0 +1,24 @@
+[Unit]
+Description=service to backup a full postgres dbms
+
+[Service]
+Type=simple
+User=root
+Group=root
+EnvironmentFile=%h/.credentials-misc/mchange-sysadmin-credentials.env
+
+# Set the variable, but not the search path for ExecStart. Should, I think. Don't know why not.
+# Result is 'Executable "renew-certs" not found in path "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"'
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/var/lib/snapd/snap/bin:%h/bin:%h/development/gitproj/mchange-sysadmin-scripts/taskbin:%h/development/gitproj/mchange-sysadmin-scripts/bin
+
+# ExecStart=renew-certs
+ExecStart=%h/development/gitproj/mchange-sysadmin-scripts/taskbin/backup-postgres %H ${PG_BACKUPS_DEST}
+
+StandardError=journal
+StandardOutput=journal
+StandardInput=null
+
+
+# No [Install] because only a timer (or manual starts) should invoke this
+
+
