@@ -1,7 +1,7 @@
 #!/usr/bin/env -S scala-cli shebang --server=false
 
 //> using scala "3.3.0"
-//> using dep "com.mchange::mchange-sysadmin-scala:0.0.2"
+//> using dep "com.mchange::mchange-sysadmin-scala:0.0.3-SNAPSHOT"
 
 // for debugging
 // tail -f /var/log/letsencrypt/letsencrypt.log
@@ -15,19 +15,20 @@
 import scala.collection.*
 import com.mchange.sysadmin.*
 
-def itRan( run : Step.Run.Completed ) : Boolean =
+def itRan( run : Step.Run.Completed[Unit] ) : Boolean =
   val stdout = run.result.stepOut
   stdout.contains("Certificate not yet due") || stdout.contains("Renewing an existing certificate")
 
-val task = new Task:
+val task = new Task[Unit]:
   val name = "Renew certs"
   val sequential = List(
-    Step.Exec("Stop nginx", List("systemctl", "stop", "nginx")),
-    Step.Exec("Renew certs", List("certbot", "renew", "--standalone", "--no-random-sleep-on-renew"), isSuccess = itRan),
+    Step.Simple("Stop nginx", List("systemctl", "stop", "nginx")),
+    Step.Simple("Renew certs", List("certbot", "renew", "--standalone", "--no-random-sleep-on-renew"), isSuccess = itRan),
   )
   val bestAttemptCleanups = List(
-    Step.Exec("Restart nginx", List("systemctl","restart","nginx"))
+    Step.Simple("Restart nginx", List("systemctl","restart","nginx"))
   )
 
-val taskRunner = TaskRunner.default(from="sysadmin@mchange.com",to="sysadmin@mchange.com")
+val taskRunner = TaskRunner.default[Unit](from="sysadmin@mchange.com",to="sysadmin@mchange.com")
 taskRunner.runAndReport(task)
+
