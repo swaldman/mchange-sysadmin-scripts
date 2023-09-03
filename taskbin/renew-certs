@@ -1,7 +1,7 @@
 #!/usr/bin/env -S scala-cli shebang --server=false
 
 //> using scala "3.3.0"
-//> using dep "com.mchange::mchange-sysadmin-scala:0.0.4-SNAPSHOT"
+//> using dep "com.mchange::mchange-sysadmin-scala:0.0.4"
 
 // for debugging
 // tail -f /var/log/letsencrypt/letsencrypt.log
