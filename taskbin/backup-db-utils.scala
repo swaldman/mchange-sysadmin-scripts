@@ -1,6 +1,4 @@
-//> using scala "3.3.0"
-//> using dep "com.mchange::mchange-sysadmin-scala:0.0.4"
-//> using dep "com.lihaoyi::os-lib:0.9.1"
+//> using file project.scala
 
 import scala.collection.*
 import com.mchange.sysadmin.*
@@ -33,11 +31,12 @@ abstract class BackupDbRunner:
     // sequential
     val EnsureRcloneIfNecessary =
       def action( prior : Pad, thisStep : tr.Arbitrary ) =
-        if isRcloneDest then
+        val out = if isRcloneDest then
           tr.arbitraryExec( prior, thisStep, List("rclone", "--version"), tr.carryPrior )
         else
           tr.Result.zeroWithCarryForward(prior)
-      tr.arbitrary(s"Ensure availability of rclone, if necessary (destpath '${destpath}')", action )
+        out.copy( notes = Some(s"destpath: ${destpath}") )
+      tr.arbitrary(s"Ensure availability of rclone, if necessary", action )
 
     val CreateTempDir =
       def action( prior : Pad, thisStep : tr.Arbitrary ) = tr.result( None, "", "", Pad(Some(os.temp.dir()), None) )
@@ -49,7 +48,7 @@ abstract class BackupDbRunner:
         val backupFile = tmpDir / backupFileName
         val parsedCommand = computeDoBackupParsedCommand( args, backupFile ) // e.g. List("postgres-dump-all-to-file", backupFile.toString)        
         def carryForward( prior : Pad, exitCode : Int, stepIn : String, stepOut : String ) = prior.copy(backupFile=Some(backupFile))
-        tr.arbitraryExec( prior, thisStep, parsedCommand, carryForward )
+        tr.arbitraryExec( prior, thisStep, parsedCommand, carryForward ).copy( notes = Some( s"Backup size: ${friendlyFileSize(os.size(backupFile))}" ) )
       tr.arbitrary(s"Perform ${displayDbName} Backup", action)
 
     val CopyBackupToStorage =

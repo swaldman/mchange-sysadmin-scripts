@@ -1,8 +1,7 @@
 #!/usr/bin/env -S scala-cli shebang --server=false
 
-//> using scala "3.3.0"
+//> using file project.scala
 //> using file backup-db-utils.scala
-//> using dep "com.lihaoyi::os-lib:0.9.1"
 
 if args.length != 3 then
   System.err.println(s"Usage: ${scriptPath} <mysql-root-password> <hostname-or-other-discriminator> <maybe-rclone-base-destpath>")

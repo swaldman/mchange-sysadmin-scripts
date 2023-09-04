@@ -1,13 +1,12 @@
 #!/usr/bin/env -S scala-cli shebang --server=false
 
-//> using scala "3.3.0"
-//> using dep "com.mchange::mchange-sysadmin-scala:0.0.4"
+//> using file project.scala
 
 // for debugging
 // tail -f /var/log/letsencrypt/letsencrypt.log
 
 // when we run this noninteractively, we do it in a systemd timer,
-// on an odd day with timing blurred by AccuracySec=3hr
+// on an odd day with timing blurred by RandomizedDelaySec=9hr
 //
 // so there's no need for a random sleep to prevent a
 // horde of simultaneous renewals
