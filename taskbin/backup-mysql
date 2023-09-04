@@ -1,0 +1,28 @@
+#!/usr/bin/env -S scala-cli shebang --server=false
+
+//> using scala "3.3.0"
+//> using file backup-db-utils.scala
+//> using dep "com.lihaoyi::os-lib:0.9.1"
+
+if args.length != 3 then
+  System.err.println(s"Usage: ${scriptPath} <mysql-root-password> <hostname-or-other-discriminator> <maybe-rclone-base-destpath>")
+  System.exit(1)
+
+object MysqlBackupDbRunner extends BackupDbRunner:
+  def extractHostname( args : Array[String] ) : String = args(1)
+  def extractDestpath( args : Array[String] ) : String = args(2)
+  
+  def computeDoBackupParsedCommand( args : Array[String], backupFilePath : os.Path ) : List[String] = List("mysql-dump-all-to-file", args(0), backupFilePath.toString)
+
+  def displayDbName    : String = "mysql"
+  def dumpFileCoreName : String = "mysql-dumpall"
+
+MysqlBackupDbRunner.performDbBackup(args)
+
+
+
+
+
+
+
+

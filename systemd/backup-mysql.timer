@@ -1,5 +1,5 @@
 [Unit]
-Description=schedule a weekly postgres backup
+Description=schedule a weekly mysql backup
 
 [Timer]
 # Execute job if it missed a run due to machine being off
@@ -8,7 +8,7 @@ OnCalendar=weekly
 AccuracySec=9hr
 
 #File describing job to execute
-Unit=backup-postgres.service
+Unit=backup-mysql.service
 
 [Install]
 WantedBy=timers.target

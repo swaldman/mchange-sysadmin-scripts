@@ -1,90 +1,28 @@
 #!/usr/bin/env -S scala-cli shebang --server=false
 
 //> using scala "3.3.0"
-//> using dep "com.mchange::mchange-sysadmin-scala:0.0.4"
+//> using file backup-db-utils.scala
 //> using dep "com.lihaoyi::os-lib:0.9.1"
 
-import scala.collection.*
-import com.mchange.sysadmin.*
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
-
 if args.length != 2 then
-  System.err.println("Usage: backup-postgres <hostname-or-other-discriminator> <maybe-rclone-base-destpath>")
+  System.err.println(s"Usage: ${scriptPath} <hostname-or-other-discriminator> <maybe-rclone-base-destpath>")
   System.exit(1)
 
-val hname    = args(0)
-val destpath = args(1).reverse.dropWhile( _ == '/' ).reverse // no trailing slashes!
+object PostgresBackupDbRunner extends BackupDbRunner:
+  def extractHostname( args : Array[String] ) : String = args(0)
+  def extractDestpath( args : Array[String] ) : String = args(1)
+  
+  def computeDoBackupParsedCommand( args : Array[String], backupFilePath : os.Path ) : List[String] = List("postgres-dump-all-to-file", backupFilePath.toString)
 
-val isRcloneDest = destpath.contains(':')
-val backupFileName = s"${hname}-pgdumpall-${ISO_LOCAL_DATE.format(LocalDate.now())}"
+  def displayDbName    : String = "Postgres"
+  def dumpFileCoreName : String = "pgdumpall"
 
-val fullDestPath = s"${destpath}/${hname}"
+PostgresBackupDbRunner.performDbBackup(args)
 
-case class Pad( tmpDir : Option[os.Path] = None, backupFile : Option[os.Path] = None )
 
-val tr = new TaskRunner[Pad]
 
-// sequential
-val EnsureRcloneIfNecessary =
-  def action( prior : Pad, thisStep : tr.Arbitrary ) =
-    if isRcloneDest then
-      tr.arbitraryExec( prior, thisStep, List("rclone", "--version"), tr.carryPrior )
-    else
-      tr.Result.zeroWithCarryForward(prior)
-  tr.arbitrary("Create Temp Dir", action )
 
-val CreateTempDir =
-  def action( prior : Pad, thisStep : tr.Arbitrary ) = tr.result( None, "", "", Pad(Some(os.temp.dir()), None) )
-  tr.arbitrary("Create Temp Dir", action )
 
-val PerformBackup =
-  def action( prior : Pad, thisStep : tr.Arbitrary ) =
-    val tmpDir = prior.tmpDir.getOrElse( throw new Exception("Failed to find expected backup tmpDir in carryforward. Cannot perform backup.") )
-    val backupFile = tmpDir / backupFileName
-    val parsedCommand = List("postgres-dump-all-to-file", backupFile.toString)        
-    def carryForward( prior : Pad, exitCode : Int, stepIn : String, stepOut : String ) = prior.copy(backupFile=Some(backupFile))
-    tr.arbitraryExec( prior, thisStep, parsedCommand, carryForward )
-  tr.arbitrary("Perform Postgres Backup", action)
 
-val CopyBackupToStorage =
-  def action( prior : Pad, thisStep : tr.Arbitrary ) =
-    val backupFile = prior.backupFile.getOrElse( throw new Exception("Failed to find expected backupFile in carryforward. Cannot copy backup to storage.") )
-    if isRcloneDest then
-      val tmpResult = tr.arbitraryExec( prior, thisStep, List("rclone","mkdir",fullDestPath), tr.carryPrior )
-      if tmpResult.exitCode == Some(0) then
-        tr.arbitraryExec( prior, thisStep, List("rclone","copy",backupFile.toString,fullDestPath ), tr.carryPrior )
-      else
-        tmpResult
-    else        
-      val tmpResult = tr.arbitraryExec( prior, thisStep, List("mkdir","-p",fullDestPath), tr.carryPrior )
-      if tmpResult.exitCode == Some(0) then
-        tr.arbitraryExec( prior, thisStep, List("cp",backupFile.toString,fullDestPath ), tr.carryPrior )
-      else
-        tmpResult
-  tr.arbitrary("Copy backup to storage", action )
 
-// cleanups
-val RemoveLocalBackup =
-  def action( prior : Pad, thisStep : tr.Arbitrary ) =
-    os.remove( prior.backupFile.getOrElse( throw new Exception("No backup file recorded. Could not remove backup file to clean up.") ) )
-    tr.Result.emptyWithCarryForward(prior)
-  tr.arbitrary("Remove temporary local backup.", action )
-
-val task = new tr.Task:
-  val name = "Backup postgres, all databases"
-  val init = Pad()
-  val sequential = List(
-    EnsureRcloneIfNecessary,
-    CreateTempDir,
-    PerformBackup,
-    CopyBackupToStorage,
-  )
-  val bestAttemptCleanups = List(
-    RemoveLocalBackup
-  )
-end task
-
-val reporters = TaskRunner.Reporters.default("sysadmin@mchange.com","sysadmin@mchange.com")
-tr.runAndReport(task, reporters)
 
