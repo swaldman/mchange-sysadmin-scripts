@@ -5,7 +5,7 @@ Description=schedule a weekly mysql backup
 # Execute job if it missed a run due to machine being off
 Persistent=true
 OnCalendar=weekly
-AccuracySec=9hr
+RandomizedDelaySec=9hr
 
 #File describing job to execute
 Unit=backup-mysql.service
