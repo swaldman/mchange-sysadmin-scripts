@@ -1,4 +1,4 @@
-#!/usr/bin/env -S scala-cli shebang --server=false
+#!/usr/bin/env -S scala-cli shebang --server=false --suppress-directives-in-multiple-files-warning
 
 //> using file project.scala
 
