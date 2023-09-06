@@ -9,13 +9,13 @@ EnvironmentFile=%h/.credentials-misc/mchange-sysadmin-credentials.env
 
 # Set the variable, but not the search path for ExecStart. Should, I think. Don't know why not.
 # Result is 'Executable "renew-certs" not found in path "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"'
-Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/var/lib/snapd/snap/bin:/root/bin:%h/development/gitproj/mchange-sysadmin-scripts/taskbin:%h/development/gitproj/mchange-sysadmin-scripts/bin
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/var/lib/snapd/snap/bin:/root/bin:${MCHANGE_SYSADMIN_SCRIPTS_HOME}/taskbin:${MCHANGE_SYSADMIN_SCRIPTS_HOME}/bin
 
-# Apparently this is too new for my version of systmd
-# ExecSearchPath=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/var/lib/snapd/snap/bin:/root/bin:%h/development/gitproj/mchange-sysadmin-scripts/taskbin:%h/development/gitproj/mchange-sysadmin-scripts/bin
+# Apparently this is too new for my version of systemd
+# ExecSearchPath=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/var/lib/snapd/snap/bin:/root/bin:${MCHANGE_SYSADMIN_SCRIPTS_HOME}/taskbin:${MCHANGE_SYSADMIN_SCRIPTS_HOME}/bin
 
 # ExecStart=renew-certs
-ExecStart=%h/development/gitproj/mchange-sysadmin-scripts/taskbin/renew-certs
+ExecStart=${MCHANGE_SYSADMIN_SCRIPTS_HOME}/taskbin/renew-certs
 
 # No [Install] because only a timer (or manual starts) should invoke this
 
