@@ -36,44 +36,52 @@ abstract class BackupDbRunner:
         else
           tr.Result.zeroWithCarryForward(prior)
         out.copy( notes = Some(s"destpath: ${destpath}") )
-      tr.arbitrary(s"Ensure availability of rclone, if necessary", action )
+      tr.arbitrary(s"Ensure availability of rclone, if necessary", action ).copy( actionDescription = Some("rclone --version") )
 
     val CreateTempDir =
       def action( prior : Pad, thisStep : tr.Arbitrary ) = tr.result( None, "", "", Pad(Some(os.temp.dir()), None) )
-      tr.arbitrary("Create Temp Dir", action )
+      tr.arbitrary("Create Temp Dir", action ).copy( actionDescription = Some("os.temp.dir()") )
 
     val PerformBackup =
+      var parsedCommand : List[String] = null
       def action( prior : Pad, thisStep : tr.Arbitrary ) =
         val tmpDir = prior.tmpDir.getOrElse( throw new Exception("Failed to find expected backup tmpDir in carryforward. Cannot perform backup.") )
         val backupFile = tmpDir / backupFileName
-        val parsedCommand = computeDoBackupParsedCommand( args, backupFile ) // e.g. List("postgres-dump-all-to-file", backupFile.toString)        
+        parsedCommand = computeDoBackupParsedCommand( args, backupFile ) // e.g. List("postgres-dump-all-to-file", backupFile.toString)        
         def carryForward( prior : Pad, exitCode : Int, stepIn : String, stepOut : String ) = prior.copy(backupFile=Some(backupFile))
         tr.arbitraryExec( prior, thisStep, parsedCommand, carryForward ).copy( notes = Some( s"Backup size: ${friendlyFileSize(os.size(backupFile))}" ) )
-      tr.arbitrary(s"Perform ${displayDbName} Backup", action)
+      tr.arbitrary(s"Perform ${displayDbName} Backup", action).copy( actionDescription = Some( s"Parsed command: ${parsedCommand}" ) )
 
     val CopyBackupToStorage =
+      var lastParsedCommand : List[String] = null
       def action( prior : Pad, thisStep : tr.Arbitrary ) =
         val backupFile = prior.backupFile.getOrElse( throw new Exception("Failed to find expected backupFile in carryforward. Cannot copy backup to storage.") )
         if isRcloneDest then
-          val tmpResult = tr.arbitraryExec( prior, thisStep, List("rclone","mkdir",fullDestPath), tr.carryPrior )
+          lastParsedCommand = List("rclone","mkdir",fullDestPath)
+          val tmpResult = tr.arbitraryExec( prior, thisStep, lastParsedCommand, tr.carryPrior )
           if tmpResult.exitCode == Some(0) then
-            tr.arbitraryExec( prior, thisStep, List("rclone","copy",backupFile.toString,fullDestPath ), tr.carryPrior )
+            lastParsedCommand = List("rclone","copy",backupFile.toString,fullDestPath )
+            tr.arbitraryExec( prior, thisStep, lastParsedCommand, tr.carryPrior )
           else
             tmpResult
-        else        
-          val tmpResult = tr.arbitraryExec( prior, thisStep, List("mkdir","-p",fullDestPath), tr.carryPrior )
+        else
+          lastParsedCommand = List("mkdir","-p",fullDestPath)
+          val tmpResult = tr.arbitraryExec( prior, thisStep, lastParsedCommand, tr.carryPrior )
           if tmpResult.exitCode == Some(0) then
-            tr.arbitraryExec( prior, thisStep, List("cp",backupFile.toString,fullDestPath ), tr.carryPrior )
+            lastParsedCommand = List("cp",backupFile.toString,fullDestPath )
+            tr.arbitraryExec( prior, thisStep, lastParsedCommand, tr.carryPrior )
           else
             tmpResult
-      tr.arbitrary("Copy backup to storage", action )
+      tr.arbitrary("Copy backup to storage", action ).copy( actionDescription = Some( s"Parsed command: ${lastParsedCommand}" ) )
 
     // cleanups
     val RemoveLocalBackup =
+      var target : os.Path = null
       def action( prior : Pad, thisStep : tr.Arbitrary ) =
-        os.remove( prior.backupFile.getOrElse( throw new Exception("No backup file recorded. Could not remove backup file to clean up.") ) )
+        target = prior.backupFile.getOrElse( throw new Exception("No backup file recorded. Could not remove backup file to clean up.") )
+        os.remove( target )
         tr.Result.emptyWithCarryForward(prior)
-      tr.arbitrary("Remove temporary local backup.", action )
+      tr.arbitrary("Remove temporary local backup.", action ).copy( actionDescription = Some( s"os.remove( ${target} )" ) )
 
     val task = new tr.Task:
       val name = s"Backup ${displayDbName}, all databases"
