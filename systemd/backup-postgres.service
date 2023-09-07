@@ -5,7 +5,7 @@ Description=service to backup a full postgres dbms
 Type=simple
 User=root
 Group=root
-EnvironmentFile=%h/.mchange-sysadmin/mchange-sysadmin.env
+EnvironmentFile=/etc/mchange-sysadmin/mchange-sysadmin.env
 
 # Set the variable, but not the search path for ExecStart. Should, I think. Don't know why not.
 # Result is 'Executable "renew-certs" not found in path "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"'
