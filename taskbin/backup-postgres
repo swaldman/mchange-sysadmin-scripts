@@ -12,6 +12,7 @@ object PostgresBackupDbRunner extends BackupDbRunner:
   def extractDestpath( args : Array[String] ) : String = args(1)
   
   def computeDoBackupParsedCommand( args : Array[String], backupFilePath : os.Path ) : List[String] = List("postgres-dump-all-to-file", backupFilePath.toString)
+  def doBackupActionDescription : String = "postgres-dump-all-to-file <temporary-backup-file>"
 
   def displayDbName    : String = "Postgres"
   def dumpFileCoreName : String = "pgdumpall"

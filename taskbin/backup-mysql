@@ -12,6 +12,7 @@ object MysqlBackupDbRunner extends BackupDbRunner:
   def extractDestpath( args : Array[String] ) : String = args(2)
   
   def computeDoBackupParsedCommand( args : Array[String], backupFilePath : os.Path ) : List[String] = List("mysql-dump-all-to-file", args(0), backupFilePath.toString)
+  def doBackupActionDescription : String = "mysql-dump-all-to-file <mysql-root-password> <temporary-backup-file>"
 
   def displayDbName    : String = "mysql"
   def dumpFileCoreName : String = "mysql-dumpall"
