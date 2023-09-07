@@ -6,7 +6,7 @@
 // tail -f /var/log/letsencrypt/letsencrypt.log
 
 // when we run this noninteractively, we do it in a systemd timer,
-// on an odd day with timing blurred by RandomizedDelaySec=9hr
+// on an odd day with timing blurred by RandomizedDelaySec=3hr
 //
 // so there's no need for a random sleep to prevent a
 // horde of simultaneous renewals
