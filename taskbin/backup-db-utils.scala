@@ -1,6 +1,7 @@
 //> using file project.scala
 
 import scala.collection.*
+import scala.util.Try  
 import com.mchange.sysadmin.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
@@ -49,7 +50,7 @@ abstract class BackupDbRunner:
         val backupFile = tmpDir / backupFileName
         val parsedCommand = computeDoBackupParsedCommand( args, backupFile ) // e.g. List("postgres-dump-all-to-file", backupFile.toString)        
         def carryForward( prior : Pad, exitCode : Int, stepIn : String, stepOut : String ) = prior.copy(backupFile=Some(backupFile))
-        tr.arbitraryExec( prior, thisStep, parsedCommand, carryForward ).copy( notes = Some( s"Backup size: ${friendlyFileSize(os.size(backupFile))}" ) )
+        tr.arbitraryExec( prior, thisStep, parsedCommand, carryForward ).copy( notes = Try( s"Backup size: ${friendlyFileSize(os.size(backupFile))}" ).toOption )
       tr.arbitrary(s"Perform ${displayDbName} Backup", action).copy( actionDescription = Some( doBackupActionDescription ) )
 
     val CopyBackupToStorage =
