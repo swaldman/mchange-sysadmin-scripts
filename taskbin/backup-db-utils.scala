@@ -91,6 +91,6 @@ abstract class BackupDbRunner:
       )
     end task
 
-    val reporters = TaskRunner.Reporters.default("sysadmin@mchange.com","sysadmin@mchange.com")
+    val reporters = TaskRunner.Reporters.default()
     tr.runAndReport(task, reporters)
     println(s"Backup of ${displayDbName} and reporting of results complete.")
