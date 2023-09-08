@@ -1,7 +1,6 @@
 //> using file project.scala
 
 import scala.collection.*
-import scala.util.Try  
 import com.mchange.sysadmin.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
@@ -46,16 +45,16 @@ abstract class BackupDbRunner:
 
     val PerformBackup =
       def action( prior : Pad, thisStep : tr.Arbitrary ) =
-        val tmpDir = prior.tmpDir.getOrElse( throw new Exception("Failed to find expected backup tmpDir in carryforward. Cannot perform backup.") )
+        val tmpDir = prior.tmpDir.getOrElse( abortUnexpectedPriorState("Failed to find expected backup tmpDir in carryforward. Cannot perform backup.") )
         val backupFile = tmpDir / backupFileName
         val parsedCommand = computeDoBackupParsedCommand( args, backupFile ) // e.g. List("postgres-dump-all-to-file", backupFile.toString)        
         def carryForward( prior : Pad, exitCode : Int, stepIn : String, stepOut : String ) = prior.copy(backupFile=Some(backupFile))
-        tr.arbitraryExec( prior, thisStep, parsedCommand, carryForward ).copy( notes = Try( s"Backup size: ${friendlyFileSize(os.size(backupFile))}" ).toOption )
+        tr.arbitraryExec( prior, thisStep, parsedCommand, carryForward ).withNotes( s"Backup size: ${friendlyFileSize(os.size(backupFile))}" )
       tr.arbitrary(s"Perform ${displayDbName} Backup", action).copy( actionDescription = Some( doBackupActionDescription ) )
 
     val CopyBackupToStorage =
       def action( prior : Pad, thisStep : tr.Arbitrary ) =
-        val backupFile = prior.backupFile.getOrElse( throw new Exception("Failed to find expected backupFile in carryforward. Cannot copy backup to storage.") )
+        val backupFile = prior.backupFile.getOrElse( abortUnexpectedPriorState("Failed to find expected backupFile in carryforward. Cannot copy backup to storage.") )
         if isRcloneDest then
           val tmpResult = tr.arbitraryExec( prior, thisStep, List("rclone","mkdir",fullDestPath), tr.carryPrior )
           if tmpResult.exitCode == Some(0) then
@@ -73,7 +72,7 @@ abstract class BackupDbRunner:
     // cleanups
     val RemoveLocalBackup =
       def action( prior : Pad, thisStep : tr.Arbitrary ) =
-        val target = prior.backupFile.getOrElse( throw new Exception("No backup file recorded. Could not remove backup file to clean up.") )
+        val target = prior.backupFile.getOrElse( abortUnexpectedPriorState("No backup file recorded. Could not remove backup file to clean up.") )
         os.remove( target )
         tr.Result.emptyWithCarryForward(prior)
       tr.arbitrary("Remove temporary local backup.", action ).copy( actionDescription = Some( s"os.remove( <backup-file> )" ) )

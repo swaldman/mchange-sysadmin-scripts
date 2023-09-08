@@ -1,0 +1,22 @@
+#!/usr/bin/env -S scala-cli shebang --server=false --suppress-directives-in-multiple-files-warning
+
+//> using file project.scala
+
+import scala.collection.*
+import com.mchange.sysadmin.*
+
+val tr = new TaskRunner[Unit]
+
+val task = new tr.Task:
+  val name = "Snapshot"
+  val init = ()
+  val sequential = Nil
+  val bestAttemptCleanups = List(
+    tr.exec("Memory use snapshot", List("free", "-h")),
+    tr.exec("Storage snapshot", List("df","-h"))
+  )
+
+val reporters = TaskRunner.Reporters.default()
+
+tr.runAndReport(task,reporters)
+
