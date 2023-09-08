@@ -4,11 +4,11 @@ This is an experiment in building sysadmin scripts in `Scala` using [`scala-cli`
 It makes use of the library [`mchange-sysadmin-scala`](https://github.com/swaldman/mchange-sysadmin-scala) for a variety of utilities,
 in particular for its [`TaskRunner`](https://github.com/swaldman/mchange-sysadmin-scala/blob/main/sysadmin/src/com/mchange/sysadmin/TaskRunner.scala)
 which models a sysadmin task as a pipeline of steps, and provides detailed reporting in logs and in
-nicely-formatted, color-coded HTML mail ([pdf](doc/media/backup-postgres-succeeded.pdf)):
+nicely-formatted, color-coded HTML mail:
 
-<img src="doc/media/backup-postgres-succeeded.png" width="600" />
+![Success and failure e-mails, side-by-side]("doc/media/backup-postgres-side-by-side-small.png")
 
-Here's a failure ([pdf](doc/media/backup-postgres-succeeded.pdf)), looks pretty different!
+ ([pdf](doc/media/backup-postgres-succeeded.pdf))Here's a failure ([pdf](doc/media/backup-postgres-succeeded.pdf)), looks pretty different!
 
 <img src="doc/media/backup-postgres-failed.png" width="600" />
 
