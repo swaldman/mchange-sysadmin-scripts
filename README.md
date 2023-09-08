@@ -6,7 +6,7 @@ in particular for its [`TaskRunner`](https://github.com/swaldman/mchange-sysadmi
 which models a sysadmin task as a pipeline of steps, and provides detailed reporting in logs and in
 nicely-formatted, color-coded HTML mail:
 
-![Success and failure e-mails, side-by-side]("doc/media/backup-postgres-side-by-side-small.png")
+![Success and failure e-mails, side-by-side](doc/media/backup-postgres-side-by-side-small.png)
 
  ([pdf](doc/media/backup-postgres-succeeded.pdf))Here's a failure ([pdf](doc/media/backup-postgres-succeeded.pdf)), looks pretty different!
 
