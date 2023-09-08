@@ -38,6 +38,9 @@ lives, so give it a few minutes of thought.
    # chmod go-rwx /etc/mchange-sysadmin/
    ```
 2. Set up the file `/etc/mchange-sysadmin/mchange-sysadmin.env`:
+
+   Note that the backup-database scripts interpret destinations containing a `:` as [rclone](https://rclone.org/) destinations.
+   
    ```plaintext
    MCHANGE_SYSADMIN_SCRIPTS_HOME= # The directory into which you cloned this distribution
    SMTP_USER=                     # Your e-mail provider username
