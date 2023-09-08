@@ -8,11 +8,11 @@ nicely-formatted, color-coded HTML mail:
 
 ![Success and failure e-mails, side-by-side](doc/media/backup-postgres-side-by-side-small.png)
 
-(As PDFs, [success](doc/media/backup-postgres-succeeded.pdf), [failure](doc/media/backup-postgres-succeeded.pdf))
+([success.pdf](doc/media/backup-postgres-succeeded.pdf), [failure.pdf](doc/media/backup-postgres-failed.pdf))
 
-Of course, plaintext reports are also generated for your logs.
+Of course, plaintext reports are also generated for your logs (and as an `text/plain` alternate in the e-mails).
 
-While many installations may use some of these scripts as-is, once you understand the set-up, it is easy to
+While you may find some of these scripts usable as-is, once you understand the set-up, it is easy to
 customize and to write your own scala scripts that `systemd` will trigger and that will e-mail nice reports.
 
 ## Prerequisites
