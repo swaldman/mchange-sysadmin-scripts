@@ -135,7 +135,7 @@ Very trivial shell scripts can dramatically simplify the Scala you might othewis
 
 ## Contributing
 
-Consider maintaining a fork for your own additions and customizations.
+Consider forking and maintaining a branch for your own additions and customizations.
 
 Pull requests that include additions that might be broadly useful &mdash; or enhancements of or fixes to what is already here &mdash;
 would be greatly appreciated.
