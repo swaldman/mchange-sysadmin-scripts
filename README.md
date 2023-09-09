@@ -3,8 +3,11 @@
 This is an experiment in building sysadmin scripts in `Scala` using [`scala-cli`](https://scala-cli.virtuslab.org/) and `systemd`.
 It makes use of the library [`mchange-sysadmin-scala`](https://github.com/swaldman/mchange-sysadmin-scala) for a variety of utilities,
 in particular for its [`TaskRunner`](https://github.com/swaldman/mchange-sysadmin-scala/blob/main/sysadmin/src/com/mchange/sysadmin/TaskRunner.scala)
-which models a sysadmin task as a pipeline of steps, and provides detailed reporting in logs and in
-nicely-formatted, color-coded HTML mail:
+which models a sysadmin task as a pipeline of steps.
+
+The main reason to do this is that I can write cleaner, surer code in Scala than I am capable of beyond very simple shell scripts.
+
+It's also easy to add features like detailed reporting in nicely-formatted, color-coded HTML mail:
 
 ![Success and failure e-mails, side-by-side](doc/media/backup-postgres-side-by-side-small.png)
 
