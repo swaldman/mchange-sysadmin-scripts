@@ -1,6 +1,7 @@
-#!/usr/bin/env -S scala-cli shebang --server=false --suppress-directives-in-multiple-files-warning
+#!/usr/bin/env -S scala-cli shebang --server=false
 
 //> using scala "3.3.1"
+//> using dep "com.mchange::mchange-sysadmin-scala:0.0.10"
 //> using option -deprecation
 
 if args.length != 2 then
@@ -16,6 +17,7 @@ import java.time.format.DateTimeFormatter
 import java.util.zip.GZIPInputStream
 import scala.io.Source
 import scala.util.Using
+import com.mchange.sysadmin.nginx
 
 def bufferedStreamFromFile( filePath : String) : InputStream =
   new BufferedInputStream(
@@ -33,39 +35,14 @@ def inputStream =
   else
     bufferedStreamFromFile( filePath )
 
-object NginxAccessLogEntry:
-  val LineRegex = """^(\S+) - (\S+) \[(.*)\] \"([^\"]*)\" (\d+) (\d+) \"([^\"]*)\" \"([^\"]*)\"$""".r
-  val TimestampFormatter = DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z")
-  val RequestRegex = """^(\S+) (\S+)(.*)$""".r
-
-  def apply( line : String ) : NginxAccessLogEntry =
-    line.trim match
-      case LineRegex( remoteAddress, rawRemoteUser, rawTimeLocal, request, rawHttpCode, rawBytesReturned, rawReferrer, userAgent ) =>
-        val remoteUser = if rawRemoteUser == "-" then None else Some(rawRemoteUser)
-        val timeLocal = Instant.from( TimestampFormatter.parse( rawTimeLocal ) )
-        val httpCode = rawHttpCode.toInt
-        val bytesReturned = rawBytesReturned.toLong
-        val referrer = if rawReferrer == "-" || rawReferrer.trim.isEmpty then None else Some(rawReferrer)
-        NginxAccessLogEntry( remoteAddress, remoteUser, timeLocal, request, httpCode, bytesReturned, referrer, userAgent )
-      case other =>
-        throw new Exception(s"Unexpected entry format: ${other}")        
-case class NginxAccessLogEntry(remoteAddress : String, remoteUser : Option[String], timeLocal : Instant, request : String, httpCode : Int, bytesReturned : Long, referrer : Option[String], userAgent : String):
-  lazy val (requestMethod : String, requestPath : String, httpVersionDeclaration : Option[String]) =
-    request match
-      case NginxAccessLogEntry.RequestRegex( rm, rp, mbhv ) => 
-        val hv =
-          val raw = mbhv.trim
-          if raw.nonEmpty then Some(raw) else None
-        ( rm, rp, hv )
-
 case class PathReferrer( path : String, referrer : String )
 
 Using.resource( Source.fromInputStream( inputStream ) ): source => 
   val pathReferrers =
     source.getLines
-      .map( NginxAccessLogEntry.apply )
+      .map( nginx.AccessLogEntry.apply )
       .collect { // only referrers to resources we actually at least kind of have
-        case entry @ NginxAccessLogEntry(_, _, _, _, hc, _, Some( goodReferrer ), _) if hc / 100 == 2 || hc / 100 == 3 =>
+        case entry @ nginx.AccessLogEntry(_, _, _, _, hc, _, Some( goodReferrer ), _) if hc / 100 == 2 || hc / 100 == 3 =>
           PathReferrer( entry.requestPath, goodReferrer )
       }
       .filterNot( _.referrer.indexOf( filter ) >= 0 )
@@ -75,11 +52,11 @@ Using.resource( Source.fromInputStream( inputStream ) ): source =>
   val reportTups =
     pathReferrersToCounts
     .toSeq
-    .collect { case ( PathReferrer( p, r ), c ) => (c, p, r) }
+    .collect { case ( PathReferrer( p, r ), c ) => (c, r, p) }
     .sorted( summon[Ordering[Tuple3[Int,String,String]]].reverse )
 
   println("Referrers (and counts):")
-  reportTups.foreach: (c,p,r) =>
+  reportTups.foreach: (c,r,p) =>
     println( s"  ${r} --> ${p} (${c})" )
 
 
