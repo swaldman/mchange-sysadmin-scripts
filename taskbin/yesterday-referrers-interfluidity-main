@@ -1,0 +1,29 @@
+#!/usr/bin/env -S scala-cli shebang --server=false --suppress-directives-in-multiple-files-warning
+
+//> using file project.scala
+
+import scala.collection.*
+import com.mchange.sysadmin.*
+import java.time.{Instant,ZoneId}
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+
+val yesterday = Instant.now().minus(1, ChronoUnit.DAYS).atZone(ZoneId.systemDefault())
+
+val DayFormatterForHumans = DateTimeFormatter.ISO_LOCAL_DATE
+val DayFormatterForFilenames = DateTimeFormatter.ofPattern("yyyyMMdd")
+
+val logfile = "/var/log/nginx/interfluidity.com-access.log-" + DayFormatterForFilenames.format(yesterday) + ".gz"
+
+val tr = new TaskRunner[Unit]
+
+val task = new tr.Task:
+  val name = "Referrers, main interfluidity.com, " + DayFormatterForHumans.format(yesterday)
+  val init = ()
+  val sequential = tr.exec("Referrers", List("report-referrers", logfile, "interfluidity.com")) :: Nil
+  val bestAttemptCleanups = Nil
+
+val reporters = TaskRunner.Reporters.default()
+
+tr.runAndReport(task,reporters)
+

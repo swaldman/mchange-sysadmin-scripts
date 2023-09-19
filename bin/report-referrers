@@ -62,6 +62,18 @@ case class NginxAccessLogEntry(remoteAddress : String, remoteUser : Option[Strin
 
 case class PathReferrer( path : String, referrer : String )
 
+/*
+// XXX: This is really about resolving an HTML mail problem. We should address it in the HTML mailer
+//      What should be monospaced code gets highlighted blue in mail if it loks like a URL,
+//      messing up the generated tables.
+def deUrlReferrer( referrer : String ) =
+  val sb = new StringBuilder
+  referrer.foreach: c =>
+    sb.append(c)
+    if c == '.' || c == ':' || c == '/' then sb.append('\u200B')
+  sb.toString
+*/  
+
 Using.resource( Source.fromInputStream( inputStream ) ): source => 
   val pathReferrers =
     source.getLines
@@ -79,7 +91,9 @@ Using.resource( Source.fromInputStream( inputStream ) ): source =>
     .toSeq
     .collect { case ( PathReferrer( p, r ), c ) => (c, p, r) }
     .sorted( summon[Ordering[Tuple3[Int,String,String]]].reverse )
-    .map { case (c,p,r) => (r,p,c) }
+    .map { case (c,p,r) => (r,p,c) } // XXX: get rid of this, address it in the HTML mail sender
+    //.map { case (c,p,r) => (deUrlReferrer(r),p,c) } // XXX: get rid of this, address it in the HTML mail sender
+    
   val reportRows = reportTups.map( texttable.Row.apply )
   val reportCols = texttable.Column("Referrer") :: texttable.Column("Path") :: texttable.Column("Count") :: Nil
   texttable.printProductTable( reportCols )( reportRows )

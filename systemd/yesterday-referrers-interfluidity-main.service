@@ -1,0 +1,21 @@
+[Unit]
+Description=service to report yesterday's referrer's to main interfluidity.com
+
+[Service]
+Type=simple
+User=root
+Group=root
+EnvironmentFile=/etc/mchange-sysadmin/mchange-sysadmin.env
+
+# Set the variable, but not the search path for ExecStart. Should, I think. Don't know why not.
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/var/lib/snapd/snap/bin:/root/bin:${MCHANGE_SYSADMIN_SCRIPTS_HOME}/taskbin:${MCHANGE_SYSADMIN_SCRIPTS_HOME}/bin
+
+# Apparently this is too new for my version of systemd
+# ExecSearchPath=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/var/lib/snapd/snap/bin:/root/bin:${MCHANGE_SYSADMIN_SCRIPTS_HOME}/taskbin:${MCHANGE_SYSADMIN_SCRIPTS_HOME}/bin
+
+# we need to run bash -c because environment variables aren't permitted in the base path
+ExecStart=/bin/bash -c "PATH=${PATH} ${MCHANGE_SYSADMIN_SCRIPTS_HOME}/taskbin/yesterday-referrers-interfluidity-main"
+
+# No [Install] because only a timer (or manual starts) should invoke this
+
+
