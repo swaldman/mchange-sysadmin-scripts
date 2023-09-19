@@ -47,7 +47,7 @@ object NginxAccessLogEntry:
         val timeLocal = Instant.from( TimestampFormatter.parse( rawTimeLocal ) )
         val httpCode = rawHttpCode.toInt
         val bytesReturned = rawBytesReturned.toLong
-        val referrer = if rawReferrer == "-" then None else Some(rawReferrer)
+        val referrer = if rawReferrer == "-" || rawReferrer.trim.isEmpty then None else Some(rawReferrer)
         NginxAccessLogEntry( remoteAddress, remoteUser, timeLocal, request, httpCode, bytesReturned, referrer, userAgent )
       case other =>
         throw new Exception(s"Unexpected entry format: ${other}")        
