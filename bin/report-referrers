@@ -66,7 +66,10 @@ Using.resource( Source.fromInputStream( inputStream ) ): source =>
   val pathReferrers =
     source.getLines
       .map( NginxAccessLogEntry.apply )
-      .collect { case entry @ NginxAccessLogEntry(_, _, _, _, _, _, Some( goodReferrer ), _) => PathReferrer( entry.requestPath, goodReferrer ) }
+      .collect { // only referrers to resources we actually at least kind of have
+        case entry @ NginxAccessLogEntry(_, _, _, _, hc, _, Some( goodReferrer ), _) if hc / 100 == 2 || hc / 100 == 3 =>
+          PathReferrer( entry.requestPath, goodReferrer )
+      }
       .filterNot( _.referrer.indexOf( filter ) >= 0 )
       .toSeq
   val pathReferrersToCounts =
