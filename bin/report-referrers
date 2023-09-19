@@ -1,0 +1,85 @@
+#!/usr/bin/env -S scala-cli shebang --server=false --suppress-directives-in-multiple-files-warning
+
+//> using scala "3.3.1"
+//> using dep "com.mchange::texttable:0.0.3"
+//> using option -deprecation
+
+if args.length != 2 then
+  System.err.println(s"${scriptPath} <nginx-access-log-maybe-gz> <filter>")
+  System.exit(3)
+
+val filePath = args(0)
+val filter = args(1)
+
+import java.io.*
+import java.time.Instant
+import java.time.format.DateTimeFormatter
+import java.util.zip.GZIPInputStream
+import scala.io.Source
+import scala.util.Using
+import com.mchange.sc.v1.texttable
+
+def bufferedStreamFromFile( filePath : String) : InputStream =
+  new BufferedInputStream(
+    new FileInputStream(
+      new File(args(0))
+    )
+  )
+
+def bufferedStreamFromGzipFile( filePath : String ) : InputStream =
+  new GZIPInputStream( bufferedStreamFromFile( filePath ) )
+
+def inputStream =
+  if filePath.endsWith(".gz") then
+    bufferedStreamFromGzipFile( filePath )
+  else
+    bufferedStreamFromFile( filePath )
+
+object NginxAccessLogEntry:
+  val LineRegex = """^(\S+) - (\S+) \[(.*)\] \"([^\"]*)\" (\d+) (\d+) \"([^\"]*)\" \"([^\"]*)\"$""".r
+  val TimestampFormatter = DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z")
+  val RequestRegex = """^(\S+) (\S+)(.*)$""".r
+
+  def apply( line : String ) : NginxAccessLogEntry =
+    line.trim match
+      case LineRegex( remoteAddress, rawRemoteUser, rawTimeLocal, request, rawHttpCode, rawBytesReturned, rawReferrer, userAgent ) =>
+        val remoteUser = if rawRemoteUser == "-" then None else Some(rawRemoteUser)
+        val timeLocal = Instant.from( TimestampFormatter.parse( rawTimeLocal ) )
+        val httpCode = rawHttpCode.toInt
+        val bytesReturned = rawBytesReturned.toLong
+        val referrer = if rawReferrer == "-" then None else Some(rawReferrer)
+        NginxAccessLogEntry( remoteAddress, remoteUser, timeLocal, request, httpCode, bytesReturned, referrer, userAgent )
+      case other =>
+        throw new Exception(s"Unexpected entry format: ${other}")        
+case class NginxAccessLogEntry(remoteAddress : String, remoteUser : Option[String], timeLocal : Instant, request : String, httpCode : Int, bytesReturned : Long, referrer : Option[String], userAgent : String):
+  lazy val (requestMethod : String, requestPath : String, httpVersionDeclaration : Option[String]) =
+    request match
+      case NginxAccessLogEntry.RequestRegex( rm, rp, mbhv ) => 
+        val hv =
+          val raw = mbhv.trim
+          if raw.nonEmpty then Some(raw) else None
+        ( rm, rp, hv )
+
+case class PathReferrer( path : String, referrer : String )
+
+Using.resource( Source.fromInputStream( inputStream ) ): source => 
+  val pathReferrers =
+    source.getLines
+      .map( NginxAccessLogEntry.apply )
+      .collect { case entry @ NginxAccessLogEntry(_, _, _, _, _, _, Some( goodReferrer ), _) => PathReferrer( entry.requestPath, goodReferrer ) }
+      .filterNot( _.referrer.indexOf( filter ) >= 0 )
+      .toSeq
+  val pathReferrersToCounts =
+    pathReferrers.groupBy( identity ).view.mapValues( seq => seq.size ).toMap
+  val reportTups =
+    pathReferrersToCounts
+    .toSeq
+    .collect { case ( PathReferrer( p, r ), c ) => (c, p, r) }
+    .sorted( summon[Ordering[Tuple3[Int,String,String]]].reverse )
+    .map { case (c,p,r) => (r,p,c) }
+  val reportRows = reportTups.map( texttable.Row.apply )
+  val reportCols = texttable.Column("Referrer") :: texttable.Column("Path") :: texttable.Column("Count") :: Nil
+  texttable.printProductTable( reportCols )( reportRows )
+
+
+
