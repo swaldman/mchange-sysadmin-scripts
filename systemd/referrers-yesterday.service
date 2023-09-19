@@ -1,5 +1,5 @@
 [Unit]
-Description=service to report yesterday's referrer's to main interfluidity.com
+Description=service to report yesterday's referrer's to interfluidity.com websites
 
 [Service]
 Type=simple
@@ -14,7 +14,7 @@ Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/var/lib/snap
 # ExecSearchPath=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/var/lib/snapd/snap/bin:/root/bin:${MCHANGE_SYSADMIN_SCRIPTS_HOME}/taskbin:${MCHANGE_SYSADMIN_SCRIPTS_HOME}/bin
 
 # we need to run bash -c because environment variables aren't permitted in the base path
-ExecStart=/bin/bash -c "PATH=${PATH} ${MCHANGE_SYSADMIN_SCRIPTS_HOME}/taskbin/yesterday-referrers-interfluidity-main"
+ExecStart=/bin/bash -c "PATH=${PATH} ${MCHANGE_SYSADMIN_SCRIPTS_HOME}/taskbin/referrers-yesterday"
 
 # No [Install] because only a timer (or manual starts) should invoke this
 
