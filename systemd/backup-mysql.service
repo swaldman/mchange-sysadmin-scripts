@@ -3,8 +3,8 @@ Description=service to backup a full mysql dbms
 
 [Service]
 Type=simple
-User=root
-Group=root
+User=mchange-sysadmin
+Group=mchange-sysadmin
 EnvironmentFile=/etc/mchange-sysadmin/mchange-sysadmin.env
 
 # Set the variable, but not the search path for ExecStart. Should, I think. Don't know why not.
