@@ -41,7 +41,7 @@ lives, so give it a few minutes of thought.
    # chmod go-rwx /etc/mchange-sysadmin/
    ```
 2. Create a user named `mchange-sysadmin`. When possible, admin tasks run as that user rather than as `root`.
-   Some tasks cannot run as `mchange-sysadmin`, must run as `root`, or some specific user like `nginx`, however.
+   However, some tasks cannot run as `mchange-sysadmin`, must run as `root`, or some specific user like `nginx`.
 
 3. Set up the file `/etc/mchange-sysadmin/mchange-sysadmin.env`:
 
