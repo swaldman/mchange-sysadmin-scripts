@@ -26,24 +26,28 @@ This application is intended for linux machines running [`systemd`](https://syst
 
 ## Installation
 
-### 1. Clone this repository
+### 1. Create a user named `mchange-sysadmin`
+
+When possible, admin tasks run as that user rather than as `root`.
+However, some tasks cannot run as `mchange-sysadmin`, must run as `root`, or some specific user like `nginx`.
+
+
+### 2. Clone this repository as `mchange-sysadmin`
 
 It doesn't matter where so much. But this will be where your scripts and systemd units live their best, permanent
 lives, so give it a few minutes of thought.
 
 (If you want scripts as a particular version or tag, just use `git checkout <tag-or-commit>` to get the version you want.)
 
-### 2. Configure the environment
+### 3. Configure the environment
 
 1. Make the config directory. This directory will contain e-mail and perhaps database credentials, so set restrictive permissions.
    ```plaintext
    # mkdir /etc/mchange-sysadmin/
    # chmod go-rwx /etc/mchange-sysadmin/
    ```
-2. Create a user named `mchange-sysadmin`. When possible, admin tasks run as that user rather than as `root`.
-   However, some tasks cannot run as `mchange-sysadmin`, must run as `root`, or some specific user like `nginx`.
 
-3. Set up the file `/etc/mchange-sysadmin/mchange-sysadmin.env`:
+2. Set up the file `/etc/mchange-sysadmin/mchange-sysadmin.env`:
 
    Note that the backup-database scripts interpret destinations containing a `:` as [rclone](https://rclone.org/) destinations.
    
@@ -64,7 +68,9 @@ lives, so give it a few minutes of thought.
    MYSQL_BACKUPS_DEST=            # If you'll use the backup-mysql script, an rclone destination to which to send backups
    ```
 
-4. Depending which scripts you run, the `mchange-sysadmin` user may require...
+### 4. Provide `mchange-admin` home-directory resources
+
+   Depending which scripts you run, the `mchange-sysadmin` user may require...
    * `~/.config/rclone/rclone.conf` &mdash; this file defines `rclone` destinations
      and authentication thereto, if you use `rclone` destinations in backup scripts
    * `~/.pgpass` &mdash; `postgresql` does not permit supplying a password by
@@ -80,7 +86,7 @@ lives, so give it a few minutes of thought.
            ```
            You need access to ALL databases. See the [postgres docs](https://www.postgresql.org/docs/current/libpq-pgpass.html).
 
-### 3. Link service and timer unit files where `systemd` will find them
+### 5. Link service and timer unit files where `systemd` will find them
 
 For example, if you want to use the `backup-postgres` script and you've cloned this distribution into `/usr/local`, then...
 
@@ -92,7 +98,7 @@ For example, if you want to use the `backup-postgres` script and you've cloned t
 
 Of course, review the unit files, and edit them to suit. Perhaps you want postgres backed up more frequently, or less.
 
-### 4. Test your service
+### 6. Test your service
 
 It's just...
 
@@ -109,7 +115,7 @@ To follow what's happening, and debug any problems:
 Once the script runs cleanly, you should see a report in the log, and receive a prettier one by e-mail
 at the `SYSADMIN_MAIL_TO` address you've configured.
 
-### 5. Install and start your timer
+### 7. Install and start your timer
 
 For every script you want to be triggered automatically, you'll need to install and start a timer:
 
