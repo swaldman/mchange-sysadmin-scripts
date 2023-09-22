@@ -40,7 +40,10 @@ lives, so give it a few minutes of thought.
    # mkdir /etc/mchange-sysadmin/
    # chmod go-rwx /etc/mchange-sysadmin/
    ```
-2. Set up the file `/etc/mchange-sysadmin/mchange-sysadmin.env`:
+2. Create a user named `mchange-sysadmin`. When possible, admin tasks run as that user rather than as `root`.
+   Some tasks must run as `root`, however.
+
+3. Set up the file `/etc/mchange-sysadmin/mchange-sysadmin.env`:
 
    Note that the backup-database scripts interpret destinations containing a `:` as [rclone](https://rclone.org/) destinations.
    
@@ -59,8 +62,22 @@ lives, so give it a few minutes of thought.
    PG_BACKUPS_DEST=               # If you'll use the backup-postgres script, an rclone destination to which to send backups
    MYSQL_ROOT_PASSWORD=           # The root password to your mysql installation
    MYSQL_BACKUPS_DEST=            # If you'll use the backup-mysql script, an rclone destination to which to send backups
-
    ```
+
+4. Depending which scripts you run, the `mchange-sysadmin` user may require...
+   * `~/.config/rclone/rclone.conf` &mdash; this file defines `rclone` destinations
+     and authentication thereto, if you use `rclone` destinations in backup scripts
+   * `~/.pgpass` &mdash; `postgresql` does not permit supplying a password by
+     command-line and disrecommends the use of the `PGPASSWORD` environment variable.
+     In order for user `mchange-sysadmin` to authenticate as super-user `postgres`,
+     you will want to
+        1. [Set a password](https://chartio.com/resources/tutorials/how-to-set-the-default-user-password-in-postgresql/) for superuser `postgres`
+        2. Verify that your `pg_hba.conf` allows access from localhost with password authentication
+           (e.g. `scram-sha-256`)
+        3. Create a `~/.pgpass` file of the form
+           ```
+           127.0.0.1:5432:postgres:postgres:<superuser-postgres-password>
+           ```
 
 ### 3. Link service and timer unit files where `systemd` will find them
 

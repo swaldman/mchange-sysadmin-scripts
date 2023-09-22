@@ -1,10 +1,18 @@
 #!/bin/bash
 
+# To run this as any user other than superuser `postgres`,
+# the executing will need a ~/.pgpass set up for user `postgres`,
+# database `postgres`, like
+#
+# 127.0.0.1:5432:postgres:postgres:<superuser-postgres-password>
+#
+# See README.md for more
+
 if [ $# != 1 ]; then
   echo "Usage: $0 <path-of-file-to-dump-to>"
   exit 3
 else  
-  su postgres -c pg_dumpall > $1
+  pg_dumpall --user=postgres --host=127.0.0.1 --no-password > $1
 fi
 
 
