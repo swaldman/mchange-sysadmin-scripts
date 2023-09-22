@@ -4,7 +4,7 @@ if [ $# != 1 ]; then
   echo "Usage: $0 <path-of-file-to-dump-to>"
   exit 3
 else
-  mysqldump --defaults-extra-file=~/.mysql-root@localhost.cnf -u root --all-databases > $1
+  mysqldump --defaults-extra-file=$MYSQL_DEFAULTS_EXTRA -u root --all-databases > $1
 fi
 
 

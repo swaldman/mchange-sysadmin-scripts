@@ -26,25 +26,27 @@ This application is intended for linux machines running [`systemd`](https://syst
 
 ## Installation
 
-### 1. Create a user named `mchange-sysadmin`
+### I. Create a user named `mchange-sysadmin`
 
 When possible, admin tasks run as that user rather than as `root`.
 However, some tasks cannot run as `mchange-sysadmin`, must run as `root`, or some specific user like `nginx`.
 
 
-### 2. Clone this repository as `mchange-sysadmin`
+### II. Clone this repository as `mchange-sysadmin`
 
 It doesn't matter where so much. But this will be where your scripts and systemd units live their best, permanent
 lives, so give it a few minutes of thought.
 
 (If you want scripts as a particular version or tag, just use `git checkout <tag-or-commit>` to get the version you want.)
 
-### 3. Configure the environment
+### III. Configure the environment
 
 1. Make the config directory. This directory will contain e-mail and perhaps database credentials, so set restrictive permissions.
+   This directory, and its environment file,  should be accessible only to `mchange-sysadmin`. 
    ```plaintext
    # mkdir /etc/mchange-sysadmin/
    # chmod go-rwx /etc/mchange-sysadmin/
+   # chown mchange-sysadmin:mchange-sysadmin /etc/mchange-sysadmin
    ```
 
 2. Set up the file `/etc/mchange-sysadmin/mchange-sysadmin.env`:
@@ -64,29 +66,48 @@ lives, so give it a few minutes of thought.
 
    # Optional
    PG_BACKUPS_DEST=               # If you'll use the backup-postgres script, an rclone destination to which to send backups
-   MYSQL_ROOT_PASSWORD=           # The root password to your mysql installation
    MYSQL_BACKUPS_DEST=            # If you'll use the backup-mysql script, an rclone destination to which to send backups
+
+   # Authentication resources -- probably use these as is!
+   RCLONE_CONFIG=/etc/mchange-sysadmin/rclone.conf
+   PGPASSFILE=/etc/mchange-sysadmin/pgpass
+   MYSQL_DEFAULTS_EXTRA=/etc/mchange-sysadmin/mysql-root@localhost.cnf
    ```
 
-### 4. Provide `mchange-admin` home-directory resources
+### IV. Provide authentication resources
 
-   Depending which scripts you run, the `mchange-sysadmin` user may require...
-   * `~/.config/rclone/rclone.conf` &mdash; this file defines `rclone` destinations
-     and authentication thereto, if you use `rclone` destinations in backup scripts
-   * `~/.pgpass` &mdash; `postgresql` does not permit supplying a password by
-     command-line and disrecommends the use of the `PGPASSWORD` environment variable.
-     In order for user `mchange-sysadmin` to authenticate as super-user `postgres`,
+Depending on which scripts you run, and whether you use `rclone` backup destinations, you may need to set up
+the following files:
+
+   * `/etc/mchange-sysadmin/rclone.conf` &mdash; this file defines `rclone` destinations
+     and authentication thereto, if you use `rclone` destinations in backup scripts.
+     One way to get it is just to use `rclone config` and let that generate the config file
+     as `~/.config/rclone/rclone.conf`, then copy that to `/etc/mchange-sysadmin/rclone.conf`.
+
+     It may work to `export RCLONE_CONFIG=/etc/mchange-sysadmin/rclone.conf`, then run `rclone config`, but I haven't
+     tried it yet.
+     
+   * `/etc/mchange-sysadmin/rclone.conf/pgpass` &mdash; In order for user `mchange-sysadmin` to authenticate as super-user `postgres`,
      you will want to
         1. [Set a password](https://chartio.com/resources/tutorials/how-to-set-the-default-user-password-in-postgresql/) for superuser `postgres`
         2. Verify that your `pg_hba.conf` allows access from localhost with password authentication
            (e.g. `scram-sha-256`)
-        3. Create a `~/.pgpass` file of the form
+        3. Create a `/etc/mchange-sysadmin/rclone.conf/pgpass` file of the form
            ```
            127.0.0.1:5432:*:postgres:<superuser-postgres-password>
            ```
            You need access to ALL databases. See the [postgres docs](https://www.postgresql.org/docs/current/libpq-pgpass.html).
+	   
+   * `/etc/mchange-sysadmin/mysql-root@localhost.cnf`, which should [look like](https://stackoverflow.com/questions/34916074/how-to-pass-password-from-file-to-mysql-command)
+      ```
+      [client]
+      password="<your-mysql-root-password>"
+      ```
 
-### 5. Link service and timer unit files where `systemd` will find them
+All these files should be owned by `mchange-sysadmin`, and `chmod 600`.
+	   
+
+### V. Link service and timer unit files where `systemd` will find them
 
 For example, if you want to use the `backup-postgres` script and you've cloned this distribution into `/usr/local`, then...
 
@@ -98,7 +119,7 @@ For example, if you want to use the `backup-postgres` script and you've cloned t
 
 Of course, review the unit files, and edit them to suit. Perhaps you want postgres backed up more frequently, or less.
 
-### 6. Test your service
+### VI. Test your service
 
 It's just...
 
@@ -115,7 +136,7 @@ To follow what's happening, and debug any problems:
 Once the script runs cleanly, you should see a report in the log, and receive a prettier one by e-mail
 at the `SYSADMIN_MAIL_TO` address you've configured.
 
-### 7. Install and start your timer
+### VII. Install and start your timer
 
 For every script you want to be triggered automatically, you'll need to install and start a timer:
 
