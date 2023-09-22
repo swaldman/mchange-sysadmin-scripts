@@ -1,8 +1,6 @@
-#!/usr/bin/env -S scala-cli shebang --server=false
+#!/usr/bin/env -S scala-cli shebang --server=false  --suppress-directives-in-multiple-files-warning
 
-//> using scala "3.3.1"
-//> using dep "com.mchange::mchange-sysadmin-scala:0.0.10"
-//> using option -deprecation
+//> using file ../project.scala
 
 if args.length != 2 then
   System.err.println(s"${scriptPath} <nginx-access-log-maybe-gz> <filter>")

@@ -1,4 +1,4 @@
-//> using file project.scala
+//> using file ../project.scala
 
 import scala.collection.*
 import com.mchange.sysadmin.*
