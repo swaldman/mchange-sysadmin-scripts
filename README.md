@@ -76,8 +76,9 @@ lives, so give it a few minutes of thought.
            (e.g. `scram-sha-256`)
         3. Create a `~/.pgpass` file of the form
            ```
-           127.0.0.1:5432:postgres:postgres:<superuser-postgres-password>
+           127.0.0.1:5432:*:postgres:<superuser-postgres-password>
            ```
+           You need access to ALL databases. See the [postgres docs](https://www.postgresql.org/docs/current/libpq-pgpass.html).
 
 ### 3. Link service and timer unit files where `systemd` will find them
 

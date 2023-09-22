@@ -2,9 +2,9 @@
 
 # To run this as any user other than superuser `postgres`,
 # the executing will need a ~/.pgpass set up for user `postgres`,
-# database `postgres`, like
+# database `*` (all databases), like
 #
-# 127.0.0.1:5432:postgres:postgres:<superuser-postgres-password>
+# 127.0.0.1:5432:*:postgres:<superuser-postgres-password>
 #
 # See README.md for more
 

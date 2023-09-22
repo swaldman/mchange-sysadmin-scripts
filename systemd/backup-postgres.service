@@ -10,6 +10,7 @@ EnvironmentFile=/etc/mchange-sysadmin/mchange-sysadmin.env
 # Set the variable, but not the search path for ExecStart. Should, I think. Don't know why not.
 # Result is 'Executable "renew-certs" not found in path "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"'
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/var/lib/snapd/snap/bin:%h/bin:${MCHANGE_SYSADMIN_SCRIPTS_HOME}/taskbin:${MCHANGE_SYSADMIN_SCRIPTS_HOME}/bin
+Environment=HOME=%h
 
 # we need to run bash -c because environment variables aren't permitted in the base path
 # we explicitly provide the substituted path, because otherwise the child process sees the
