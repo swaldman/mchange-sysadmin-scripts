@@ -151,6 +151,20 @@ It's very easy to follow the pattern and make new ones for your new task.
 You can define traditional shell scripts as helpers, and place them in the [`bin`](bin) directory.
 Very trivial shell scripts can dramatically simplify the Scala you might othewise need to write.
 
+## Known shortcomings
+
+For security purposes, scripts run as the least-privilged user they can
+run under, not always as `root`. However, `scala-cli` will download dependencies
+(including JVMs!) and generate compilation artifacts on a per-user basis.
+Every user that runs a script ends up with a variety of duplicated infrastructure
+buried in its home directory.
+
+The storage overhead is **substantial**, 500M to 700M per user. Perhaps it would
+be best to restrict to users `mchange-sysadmin` and `root`, so we don't bear
+this cost too many times?
+
+It's a tradeoff of space vs a small amount of additional security.
+
 ## Contributing
 
 Consider forking and maintaining a branch for your own additions and customizations.
