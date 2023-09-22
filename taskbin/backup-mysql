@@ -3,16 +3,16 @@
 //> using file project.scala
 //> using file backup-db-utils.scala
 
-if args.length != 3 then
-  System.err.println(s"Usage: ${scriptPath} <mysql-root-password> <hostname-or-other-discriminator> <maybe-rclone-base-destpath>")
+if args.length != 2 then
+  System.err.println(s"Usage: ${scriptPath} <hostname-or-other-discriminator> <maybe-rclone-base-destpath>")
   System.exit(1)
 
 object MysqlBackupDbRunner extends BackupDbRunner:
-  def extractHostname( args : Array[String] ) : String = args(1)
-  def extractDestpath( args : Array[String] ) : String = args(2)
+  def extractHostname( args : Array[String] ) : String = args(0)
+  def extractDestpath( args : Array[String] ) : String = args(1)
   
-  def computeDoBackupParsedCommand( args : Array[String], backupFilePath : os.Path ) : List[String] = List("mysql-dump-all-to-file", args(0), backupFilePath.toString)
-  def doBackupActionDescription : String = "mysql-dump-all-to-file <mysql-root-password> <temporary-backup-file>"
+  def computeDoBackupParsedCommand( args : Array[String], backupFilePath : os.Path ) : List[String] = List("mysql-dump-all-to-file", backupFilePath.toString)
+  def doBackupActionDescription : String = "mysql-dump-all-to-file <temporary-backup-file>"
 
   def displayDbName    : String = "mysql"
   def dumpFileCoreName : String = "mysql-dumpall"
