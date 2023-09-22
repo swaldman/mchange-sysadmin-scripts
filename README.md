@@ -13,7 +13,7 @@ It's also easy to add features like detailed reporting in nicely-formatted, colo
 
 ([success.pdf](doc/media/backup-postgres-succeeded.pdf), [failure.pdf](doc/media/backup-postgres-failed.pdf))
 
-Of course, plaintext reports are also generated for your logs (and as an `text/plain` alternate in the e-mails).
+Of course, plaintext reports are also generated for regular logs (and as a `text/plain` alternate in the e-mails).
 
 While you may find some of these scripts usable as-is, once you understand the set-up, it is easy to
 customize and to write your own scala scripts that `systemd` will trigger and that will e-mail nice reports.
