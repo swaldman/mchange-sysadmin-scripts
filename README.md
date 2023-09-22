@@ -109,7 +109,7 @@ To follow what's happening, and debug any problems:
 Once the script runs cleanly, you should see a report in the log, and receive a prettier one by e-mail
 at the `SYSADMIN_MAIL_TO` address you've configured.
 
-### 5. Install and instart your timer
+### 5. Install and start your timer
 
 For every script you want to be triggered automatically, you'll need to install and start a timer:
 
