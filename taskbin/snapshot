@@ -10,11 +10,12 @@ val tr = new TaskRunner[Unit]
 val task = new tr.Task:
   val name = "Snapshot"
   val init = ()
-  val sequential = Nil
-  val bestAttemptCleanups = List(
+  val bestEffortSetups = List(
     tr.exec("Memory use snapshot", List("free", "-h")),
     tr.exec("Storage snapshot", List("df","-h"))
   )
+  val sequential = Nil
+  val bestEffortFollowups = Nil
 
 val reporters = TaskRunner.Reporters.default()
 

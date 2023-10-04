@@ -80,13 +80,14 @@ abstract class BackupDbRunner:
     val task = new tr.Task:
       val name = s"Backup ${displayDbName}, all databases"
       val init = Pad()
+      val bestEffortSetups = Nil
       val sequential = List(
         EnsureRcloneIfNecessary,
         CreateTempDir,
         PerformBackup,
         CopyBackupToStorage,
       )
-      val bestAttemptCleanups = List(
+      val bestEffortFollowups = List(
         RemoveLocalBackup
       )
     end task

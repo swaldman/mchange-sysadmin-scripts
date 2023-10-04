@@ -22,12 +22,13 @@ val tr = new TaskRunner[Unit]
 val task = new tr.Task:
   val name = "Referrers " + DayFormatterForHumans.format(yesterday)
   val init = ()
-  val sequential = Nil 
-  val bestAttemptCleanups =
+  val bestEffortSetups =
     tr.exec("www.interfluidity.com", List("report-referrers", logfileMain, "interfluidity.com")) ::
     tr.exec("drafts.interfluidity.com", List("report-referrers", logfileDrafts, "interfluidity.com")) ::
     tr.exec("tech.interfluidity.com", List("report-referrers", logfileTech, "interfluidity.com")) ::
     Nil
+  val sequential = Nil
+  val bestEffortFollowups = Nil
 
 val reporters = TaskRunner.Reporters.default()
 
