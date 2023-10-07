@@ -2,8 +2,8 @@
 
 //> using file ../project.scala
 
-import scala.collection.*
-import com.mchange.sysadmin.*
+import scala.collection.immutable
+import com.mchange.sysadmin.taskrunner.*
 import java.time.{Instant,ZoneId}
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -17,20 +17,20 @@ val logfileMain   = "/var/log/nginx/interfluidity.com-access.log-" + DayFormatte
 val logfileDrafts = "/var/log/nginx/drafts.interfluidity.com-access.log-" + DayFormatterForFilenames.format(yesterday) + ".gz"
 val logfileTech   = "/var/log/nginx/tech.interfluidity.com-access.log-" + DayFormatterForFilenames.format(yesterday) + ".gz"
 
-val tr = new TaskRunner[Unit]
+val tr = TaskRunner[Unit]
 
 val task = new tr.Task:
   val name = "Referrers " + DayFormatterForHumans.format(yesterday)
   val init = ()
-  val bestEffortSetups =
-    tr.exec("www.interfluidity.com", List("report-referrers", logfileMain, "interfluidity.com")) ::
-    tr.exec("drafts.interfluidity.com", List("report-referrers", logfileDrafts, "interfluidity.com")) ::
-    tr.exec("tech.interfluidity.com", List("report-referrers", logfileTech, "interfluidity.com")) ::
-    Nil
+  val bestEffortSetups = Set(
+    tr.exec("www.interfluidity.com", List("report-referrers", logfileMain, "interfluidity.com")),
+    tr.exec("drafts.interfluidity.com", List("report-referrers", logfileDrafts, "interfluidity.com")),
+    tr.exec("tech.interfluidity.com", List("report-referrers", logfileTech, "interfluidity.com"))
+  )
   val sequential = Nil
-  val bestEffortFollowups = Nil
+  val bestEffortFollowups = Set.empty
 
-val reporters = TaskRunner.Reporters.default()
+val reporters = Reporters.default()
 
 tr.runAndReport(task,reporters)
 

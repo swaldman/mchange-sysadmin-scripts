@@ -1,7 +1,7 @@
 //> using file ../project.scala
 
-import scala.collection.*
-import com.mchange.sysadmin.*
+import scala.collection.immutable
+import com.mchange.sysadmin.taskrunner.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
 
@@ -27,7 +27,7 @@ abstract class BackupDbRunner:
 
     case class Pad( tmpDir : Option[os.Path] = None, backupFile : Option[os.Path] = None )
 
-    val tr = new TaskRunner[Pad]
+    val tr = TaskRunner[Pad]
 
     // sequential
     val EnsureRcloneIfNecessary =
@@ -80,18 +80,18 @@ abstract class BackupDbRunner:
     val task = new tr.Task:
       val name = s"Backup ${displayDbName}, all databases"
       val init = Pad()
-      val bestEffortSetups = Nil
+      val bestEffortSetups = Set.empty
       val sequential = List(
         EnsureRcloneIfNecessary,
         CreateTempDir,
         PerformBackup,
         CopyBackupToStorage,
       )
-      val bestEffortFollowups = List(
+      val bestEffortFollowups = Set(
         RemoveLocalBackup
       )
     end task
 
-    val reporters = TaskRunner.Reporters.default()
+    val reporters = Reporters.default()
     tr.runAndReport(task, reporters)
     println(s"Backup of ${displayDbName} and reporting of results complete.")

@@ -2,22 +2,21 @@
 
 //> using file ../project.scala
 
-import scala.collection.*
-import com.mchange.sysadmin.*
+import com.mchange.sysadmin.taskrunner.*
 
 val tr = new TaskRunner[Unit]
 
 val task = new tr.Task:
   val name = "Snapshot"
   val init = ()
-  val bestEffortSetups = List(
+  val bestEffortSetups = Set(
     tr.exec("Memory use snapshot", List("free", "-h")),
     tr.exec("Storage snapshot", List("df","-h"))
   )
   val sequential = Nil
-  val bestEffortFollowups = Nil
+  val bestEffortFollowups = Set.empty
 
-val reporters = TaskRunner.Reporters.default()
+val reporters = Reporters.default()
 
 tr.runAndReport(task,reporters)
 
