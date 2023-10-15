@@ -55,12 +55,6 @@ lives, so give it a few minutes of thought.
    
    ```plaintext
    MCHANGE_SYSADMIN_SCRIPTS_HOME= # The directory into which you cloned this distribution
-   SMTP_USER=                     # Your e-mail provider username
-   SMTP_PASSWORD=                 # Your e-mail provider password
-   SMTP_HOST=                     # Your e-mail provider's SMTP host
-   SMTP_PORT=465                  # Your e-mail provider's SMTP port (if 587, probably set SMTP_STARTTLS to true)
-   #SMTP_STARTTLS=false
-   SMTP_DEBUG=false
    SYSADMIN_MAIL_FROM=            # The e-mail address sysadmin mail should be sent from
    SYSADMIN_MAIL_TO=              # The e-mail address sysadmin mail should be sent to
 
@@ -69,12 +63,32 @@ lives, so give it a few minutes of thought.
    MYSQL_BACKUPS_DEST=            # If you'll use the backup-mysql script, an rclone destination to which to send backups
 
    # Authentication resources -- probably use these as is!
+   SMTP_PROPERTIES=/etc/mchange-sysadmin/smtp.properties
    RCLONE_CONFIG=/etc/mchange-sysadmin/rclone.conf
    PGPASSFILE=/etc/mchange-sysadmin/pgpass
    MYSQL_DEFAULTS_EXTRA=/etc/mchange-sysadmin/mysql-root@localhost.cnf
    ```
 
+   This file should also be owned by, and read-only by, `mchange-sysadmin:mchange-sysadmin`.
+
 ### IV. Provide authentication resources
+
+You'll need to provide SMTP connection and authentication information. While it is possible to
+do that via [environment variables](https://github.com/swaldman/mchange-sysadmin-scala/blob/main/src/com/mchange/sysadmin/Smtp.scala) as above,
+process environment can leak and is insecure. So it's best to
+only specify the location of an `smtp.properties` file.
+
+   ```plaintext
+   mail.smtp.user=                     # Your e-mail provider username
+   mail.smtp.password=                 # Your e-mail provider password
+   mail.smtp.host=                     # Your e-mail provider's SMTP host
+   mail.smtp.port=465                  # Your e-mail provider's SMTP port (if 587, probably set mail.smtp.starttls.enable to true)
+
+   ## less commonly
+   #mail.smtp.port=587
+   #mail.smtp.starttls.enable=false
+   #mail.smtp.debug=false
+   ```
 
 Depending on which scripts you run, and whether you use `rclone` backup destinations, you may need to set up
 the following files:
@@ -173,10 +187,19 @@ Just write a script &mdash; which can and often does require command line argume
 to execute your task, using the default reporters.
 
 Once you have defined your task, check out the `.service` and `.timer` files in [`systemd`](systemd).
-It's very easy to follow the pattern and make new ones for your new task.
+It's very easy to follow the pattern and make new ones for your new task. 
 
 You can define traditional shell scripts as helpers, and place them in the [`bin`](bin) directory.
 Very trivial shell scripts can dramatically simplify the Scala you might othewise need to write.
+
+Your systemd services should run
+as user `mchange-sysadmin` if privileged access is not required, or as `root` if it is,
+because only those two users have access to configuration and authentication information.
+
+(If you want, you can play around with defining a shared group for other unprivileged accounts,
+and making config and auth files group readable. Note, though, that all users that run
+mchange-sysadmin scripts will download their own copies of its scala dependencies, costing about
+500 MB per user as of this writing.)
 
 ## Known shortcomings
 
