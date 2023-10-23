@@ -1,0 +1,21 @@
+[Unit]
+Description=schedule weekly set-up of office-hours notes and to mail notices
+
+[Timer]
+# Execute job if it missed a run due to machine being off
+Persistent=true
+
+# let's do this on the fifth of every month, rather than first or last day
+# at 3am, plus or minus 3hrs
+OnCalendar=Wed *-*-* 11:00:00 America/New_York
+RandomizedDelaySec=3hr
+
+#File describing job to execute
+Unit=office-hours-setup.service
+
+[Install]
+WantedBy=timers.target
+
+# See e.g. https://opensource.com/article/20/7/systemd-timers
+#          https://fedoramagazine.org/systemd-timers-for-scheduling-tasks/
+	   
