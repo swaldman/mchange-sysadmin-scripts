@@ -1,0 +1,27 @@
+#!/usr/bin/env -S scala-cli shebang --server=false --suppress-directives-in-multiple-files-warning
+
+//> using file ../project.scala
+
+import com.mchange.sysadmin.taskrunner.*
+import com.interfluidity.officehours.*
+
+val tr = TaskRunner[Unit]
+
+val task = new tr.Task:
+  val name = "Weekly office hours setup"
+  val init = ()
+  val bestEffortSetups = Set.empty
+  val action : (Unit, tr.Step.Arbitrary) => tr.Step.Result = ( _ : Unit, self : tr.Step.Arbitrary ) =>
+    createAndSendThisWeeksNote()
+    tr.Step.Result.emptyWithCarryForward( () )
+  val sequential = List(
+    tr.arbitrary(
+      name = "Create notes and send weekly mail",
+      action = action
+    )
+  )
+  val bestEffortFollowups = Set.empty
+
+val reporters = Reporters.default()
+
+tr.runAndReport(task,reporters)
