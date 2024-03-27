@@ -1,0 +1,66 @@
+#!/usr/bin/env -S scala-cli shebang --server=false --suppress-directives-in-multiple-files-warning
+
+//> using file ../project.scala
+
+import com.mchange.sysadmin.taskrunner.*
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
+
+if args.length != 3 then
+  System.err.println(s"Usage: ${scriptPath} <hostname-or-other-discriminator> <full-path-to-local-dir> <rclone-base-destpath>")
+  System.exit(1)
+
+require( args(2).takeWhile( _ != '/' ).indexOf(':') >= 0, s"'${args(2)} should be an rclone path, doesn't look like one." )
+
+val localDir = os.Path(args(1))
+val localDirName = localDir.last
+
+val tarFileName = s"${localDirName}-${ISO_LOCAL_DATE.format(LocalDate.now())}.tar"
+
+val fullDestDirPathStr = s"${args(2)}/${args(0)}"
+
+val tr = new TaskRunner[Option[os.Path]]
+
+// best-effort setups, but we are marking this setup essential
+val EnsureDestDir =
+  tr.exec("Ensure Destination Path", List("rclone","mkdir",fullDestDirPathStr)).copy( essential = Some(true) )
+
+// sequential
+val CreateTempDir =
+  def action( prior : Option[os.Path], thisStep : tr.Arbitrary ) =
+    tr.Result(None,"","",Some(os.temp.dir()))
+  tr.arbitrary("Create Temp Dir", action).copy( actionDescription = Some("os.temp.dir()") )
+
+val CreateTarFile =
+  def action( prior : Option[os.Path], thisStep : tr.Arbitrary ) =
+    val tmpDir = prior.get
+    val shellable = List("tar", "cf", (tmpDir / tarFileName).toString, localDirName)
+    tr.arbitraryExec( prior, thisStep, shellable, tr.carryPrior ).withNotes( shellable.mkString(" ") + System.lineSeparator() + os.size(tmpDir / tarFileName) + " bytes" )
+  tr.arbitrary("Create Tar File", action, workingDirectory=(localDir / os.up))
+
+val UploadTarFile =
+  def action( prior : Option[os.Path], thisStep : tr.Arbitrary ) =
+    val tmpDir = prior.get
+    val shellable = List("rclone","copy",(tmpDir / tarFileName).toString, fullDestDirPathStr)
+    tr.arbitraryExec( prior, thisStep, shellable, tr.carryPrior ).withNotes( shellable.mkString(" ") )
+  tr.arbitrary("Upload Tar File", action)
+
+// best-effort cleanups
+val RemoveLocalTarFile =
+  def action( prior : Option[os.Path], thisStep : tr.Arbitrary ) =
+    val tmpDir = prior.get
+    val shellable = List("rm",(tmpDir / tarFileName).toString)
+    tr.arbitraryExec( prior, thisStep, shellable, tr.carryPrior ).withNotes(shellable.mkString(" "))
+  tr.arbitrary("Remove Local Tar File", action)
+
+val task = new tr.Task:
+  val name = s"Backup ${args(1)} as tar file"
+  val init = None
+  val bestEffortSetups = Set(EnsureDestDir)
+  val sequential = List(CreateTempDir, CreateTarFile, UploadTarFile)
+  val bestEffortFollowups = Set(RemoveLocalTarFile)
+
+val reporters = Reporters.default()
+
+tr.runAndReport(task,reporters)
+
