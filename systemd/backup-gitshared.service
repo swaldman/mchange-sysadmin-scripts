@@ -1,0 +1,23 @@
+[Unit]
+Description=service to backup gitshared directory
+
+[Service]
+Type=simple
+User=mchange-sysadmin
+Group=mchange-sysadmin
+EnvironmentFile=/etc/mchange-sysadmin/mchange-sysadmin.env
+
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/var/lib/snapd/snap/bin:%h/bin:${MCHANGE_SYSADMIN_SCRIPTS_HOME}/taskbin:${MCHANGE_SYSADMIN_SCRIPTS_HOME}/bin
+
+# we need to run bash -c because environment variables aren't permitted in the base path
+# we explicitly provide the substituted path, because otherwise the child process sees the
+# literal ${...} expressions rather than substitutions. grrr....
+ExecStart=/bin/bash -c "PATH=${PATH} ${MCHANGE_SYSADMIN_SCRIPTS_HOME}/taskbin/backup-directory-as-tar %H /home/gitshared ${GITSHARED_BACKUPS_DEST}"
+
+StandardError=journal
+StandardOutput=journal
+StandardInput=null
+
+# No [Install] because only a timer (or manual starts) should invoke this
+
+

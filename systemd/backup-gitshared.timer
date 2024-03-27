@@ -1,0 +1,18 @@
+[Unit]
+Description=schedule a weekly gitshared backup
+
+[Timer]
+# Execute job if it missed a run due to machine being off
+Persistent=true
+OnCalendar=weekly America/New_York
+RandomizedDelaySec=36hr
+
+#File describing job to execute
+Unit=backup-gitshared.service
+
+[Install]
+WantedBy=timers.target
+
+# See e.g. https://opensource.com/article/20/7/systemd-timers
+#          https://fedoramagazine.org/systemd-timers-for-scheduling-tasks/
+
