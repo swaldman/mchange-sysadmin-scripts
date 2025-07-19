@@ -7,7 +7,7 @@ Persistent=true
 
 # let's do this on the fifth of every month, rather than first or last day
 # at 3am, plus or minus 3hrs
-OnCalendar=Wed *-*-* 11:00:00 America/New_York
+OnCalendar=Sat *-*-* 5:00:00 America/New_York
 RandomizedDelaySec=3hr
 
 #File describing job to execute
