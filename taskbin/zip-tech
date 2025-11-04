@@ -1,0 +1,13 @@
+#!/usr/bin/env -S scala-cli shebang --server=false --suppress-directives-in-multiple-files-warning
+
+//> using file ../project.scala
+//> using file zipper.scala
+
+import java.time.ZoneId
+
+Zipper(
+  baseName="tech.interfluidity.com",
+  siteDir=os.Path("/home/web/public/tech.interfluidity.com/public"),
+  zipDir=os.Path("/home/web/meta/zip/tech.interfluidity.com"),
+  zoneId=ZoneId.of("US/Eastern")
+).conditionallyZip
