@@ -76,6 +76,8 @@ class Zipper( baseName : String, siteDir : os.Path, zipDir : os.Path ):
     val Copy =
       def action( prior : Pad, thisStep : tr.Arbitrary ) : tr.Result =
         val tmpDir = prior.tmpDir.get
+        if !os.exists( zipDir ) then
+          os.makeDir.all( zipDir )
         os.copy( tmpDir, zipDir, mergeFolders = true )
         tr.result( None,"","",prior,Some(s"""Copying ${os.list(tmpDir).mkString(", ")} into zip dir."""))
       tr.arbitrary("Copy new zip into zip directory", action )
