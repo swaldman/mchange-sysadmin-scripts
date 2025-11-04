@@ -80,7 +80,7 @@ class Zipper( baseName : String, siteDir : os.Path, zipDir : os.Path, zoneId : Z
         if !os.exists( zipDir ) then
           os.makeDir.all( zipDir )
         os.copy( tmpDir, zipDir, mergeFolders = true )
-        tr.result( None,"","",prior,Some(s"""Copying ${os.list(tmpDir).mkString(", ")} into zip dir."""))
+        tr.result( None,"","",prior,Some(s"""Copying ${os.list(tmpDir).mkString(", ")} into ${zipDir}."""))
       tr.arbitrary("Copy new zip into zip directory", action )
 
     // clean ups
