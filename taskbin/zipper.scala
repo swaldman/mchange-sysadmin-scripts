@@ -61,34 +61,43 @@ class Zipper( baseName : String, siteDir : os.Path, zipDir : os.Path, zoneId : Z
           val tmpDir = os.temp.dir()
           tr.Result(None,"","",prior.copy( tmpDir = Some(tmpDir) ), Some(s"We're gonna zip, made temporary directory: ${tmpDir}"))
         else
-          tr.Result(None,"",s"Not zipping: ${pprint(prior).plainText}",prior, Some(s"We're not zipping: ${pprint(prior).plainText}"))
+          tr.Result(None,"","",prior, Some("We're not zipping."))
       tr.arbitrary("Create tmp directory if zipping", action )
 
     val Zip =
       //tr.exec("Zipping site directory", List("zip", (prior.tmpDir.get / (baseName + TimestampFormatter.format(Instant.now()) + ".zip")).toString, prior.siteDir.get )
       def action( prior : Pad, thisStep : tr.Arbitrary ) : tr.Result =
-        val fname = baseName + TimestampFormatter.format(Instant.now()) + ".zip"
-        val zipfile = prior.tmpDir.get / fname
-        os.zip( dest = zipfile, sources = Seq( Tuple2(siteDir,os.SubPath(baseName)) ), followLinks = false )
-        tr.Result(None,"","",prior, Some( s"Zipping ${siteDir} to $zipfile as $baseName." ))
+        if prior.tmpDir.nonEmpty then // we should zip!
+          val fname = baseName + TimestampFormatter.format(Instant.now()) + ".zip"
+          val zipfile = prior.tmpDir.get / fname
+          os.zip( dest = zipfile, sources = Seq( Tuple2(siteDir,os.SubPath(baseName)) ), followLinks = false )
+          tr.Result(None,"","",prior, Some( s"Zipping ${siteDir} to $zipfile as $baseName." ))
+        else // no failures have occurred, but we should not zip  
+          tr.Result(None,"","",prior, Some( s"${siteDir} is unchanged since last zip, not zipping." ))
       tr.arbitrary("Zip site directory", action )
 
 
     val Copy =
       def action( prior : Pad, thisStep : tr.Arbitrary ) : tr.Result =
-        val tmpDir = prior.tmpDir.get
-        if !os.exists( zipDir ) then
-          os.makeDir.all( zipDir )
-        os.copy( tmpDir, zipDir, mergeFolders = true )
-        tr.result( None,"","",prior,Some(s"""Copying ${os.list(tmpDir).mkString(", ")} into ${zipDir}."""))
+        if prior.tmpDir.nonEmpty then // we should copy!
+          val tmpDir = prior.tmpDir.get
+          if !os.exists( zipDir ) then
+            os.makeDir.all( zipDir )
+          os.copy( tmpDir, zipDir, mergeFolders = true )
+          tr.result( None,"","",prior,Some(s"""Copying ${os.list(tmpDir).mkString(", ")} into ${zipDir}."""))
+        else // no failures have occurred, but we should not zip  
+          tr.Result(None,"","",prior, Some( s"No new zip files need to be copied into ${zipDir}." ))
       tr.arbitrary("Copy new zip into zip directory", action )
 
     // clean ups
     val DeleteTmpDir =
       def action( prior : Pad, thisStep : tr.Arbitrary ) : tr.Result =
-        val tmpDir = prior.tmpDir.get
-        os.remove.all( tmpDir )
-        tr.result( None,"","",prior,Some(s"Removing ${tmpDir}") )
+        if prior.tmpDir.nonEmpty then
+          val tmpDir = prior.tmpDir.get
+          os.remove.all( tmpDir )
+          tr.result( None,"","",prior,Some(s"Removing ${tmpDir}") )
+        else  
+          tr.result( None,"","",prior,Some(s"No tmp directory was created, nothing to remove.") )
       tr.arbitrary("Delete tmp directory", action )
 
     val task = new tr.Task:
