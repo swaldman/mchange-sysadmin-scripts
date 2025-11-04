@@ -1,0 +1,10 @@
+#!/usr/bin/env -S scala-cli shebang --server=false --suppress-directives-in-multiple-files-warning
+
+//> using file ../project.scala
+//> using file zipper.scala
+
+Zipper(
+  baseName="drafts.interfluidity.com",
+  siteDir=os.Path("/home/web/public/drafts.interfluidity.com/public"),
+  zipDir=os.Path("/home/web/meta/zip/drafts.interfluidity.com")
+).conditionallyZip
