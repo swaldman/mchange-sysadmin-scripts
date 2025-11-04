@@ -5,13 +5,14 @@ import java.time.format.DateTimeFormatter
 import com.mchange.sysadmin.taskrunner.*
 import math.Ordering.Implicits.infixOrderingOps
 
-
 object Zipper:
   case class Pad( lastZipTime : Option[Instant] = None, lastUpdateTime : Option[Instant] = None, tmpDir : Option[os.Path] = None )
-  val TimestampFormatter = DateTimeFormatter.ofPattern("'-'yyyy'-'MM'-'dd'-'HH'h'mm'm'ss's'").withZone( ZoneId.systemDefault() )
-  val TimestampedRegex = """^(.+)(\-\d{4}\-\d{2}\-\d{2}\-\d{2}h\d{2}m\d{2}s)\.(.+)$""".r
-class Zipper( baseName : String, siteDir : os.Path, zipDir : os.Path ):
+  val TimestampFormatterRaw = DateTimeFormatter.ofPattern("'-'yyyy'-'MM'-'dd'--'HH'h'mm'm'ss's'")
+  val TimestampedRegex = """^(.+)(\-\d{4}\-\d{2}\-\d{2}\-\-\d{2}h\d{2}m\d{2}s)\.(.+)$""".r
+class Zipper( baseName : String, siteDir : os.Path, zipDir : os.Path, zoneId : ZoneId = ZoneId.systemDefault() ):
   import Zipper.*
+
+  val TimestampFormatter = TimestampFormatterRaw.withZone( zoneId )
 
   def conditionallyZip =
     val tr = TaskRunner[Pad]
@@ -68,8 +69,8 @@ class Zipper( baseName : String, siteDir : os.Path, zipDir : os.Path ):
       def action( prior : Pad, thisStep : tr.Arbitrary ) : tr.Result =
         val fname = baseName + TimestampFormatter.format(Instant.now()) + ".zip"
         val zipfile = prior.tmpDir.get / fname
-        os.zip( dest = zipfile, sources = Seq( siteDir ), followLinks = false )
-        tr.Result(None,"","",prior, Some( s"Zipping ${siteDir} to $zipfile." ))
+        os.zip( dest = zipfile, sources = Seq( Tuple2(siteDir,os.SubPath(baseName)) ), followLinks = false )
+        tr.Result(None,"","",prior, Some( s"Zipping ${siteDir} to $zipfile as $baseName." ))
       tr.arbitrary("Zip site directory", action )
 
 

@@ -3,8 +3,11 @@
 //> using file ../project.scala
 //> using file zipper.scala
 
+import java.time.ZoneId
+
 Zipper(
   baseName="drafts.interfluidity.com",
   siteDir=os.Path("/home/web/public/drafts.interfluidity.com/public"),
-  zipDir=os.Path("/home/web/meta/zip/drafts.interfluidity.com")
+  zipDir=os.Path("/home/web/meta/zip/drafts.interfluidity.com"),
+  zoneId=ZoneId.of("US/Eastern")
 ).conditionallyZip
