@@ -7,8 +7,8 @@ import math.Ordering.Implicits.infixOrderingOps
 
 object Zipper:
   case class Pad( lastZipTime : Option[Instant] = None, lastUpdateTime : Option[Instant] = None, tmpDir : Option[os.Path] = None )
-  val TimestampFormatterRaw = DateTimeFormatter.ofPattern("'-'yyyy'-'MM'-'dd'--'HH'h'mm'm'ss's'")
-  val TimestampedRegex = """^(.+)(\-\d{4}\-\d{2}\-\d{2}\-\-\d{2}h\d{2}m\d{2}s)\.(.+)$""".r
+  val TimestampFormatterRaw = DateTimeFormatter.ofPattern("'--'yyyy'-'MM'-'dd'--'HH'h'mm'm'ss's'")
+  val TimestampedRegex = """^(.+)(\-\-\d{4}\-\d{2}\-\d{2}\-\-\d{2}h\d{2}m\d{2}s)\.(.+)$""".r
 class Zipper( baseName : String, siteDir : os.Path, zipDir : os.Path, zoneId : ZoneId = ZoneId.systemDefault() ):
   import Zipper.*
 
