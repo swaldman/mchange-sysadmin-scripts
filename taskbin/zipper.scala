@@ -70,7 +70,7 @@ class Zipper( baseName : String, siteDir : os.Path, zipDir : os.Path, zoneId : Z
         if prior.tmpDir.nonEmpty then // we should zip!
           val fname = baseName + TimestampFormatter.format(Instant.now()) + ".zip"
           val zipfile = prior.tmpDir.get / fname
-          os.zip( dest = zipfile, sources = Seq( Tuple2(siteDir,os.SubPath(baseName)) ), followLinks = false )
+          os.zip( dest = zipfile, sources = Seq( Tuple2(siteDir,os.SubPath(baseName)) ), preserveMtimes = true, followLinks = false )
           tr.Result(None,"","",prior, Some( s"Zipping ${siteDir} to $zipfile as $baseName." ))
         else // no failures have occurred, but we should not zip  
           tr.Result(None,"","",prior, Some( s"${siteDir} is unchanged since last zip, not zipping." ))
