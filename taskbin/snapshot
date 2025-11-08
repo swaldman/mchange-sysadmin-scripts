@@ -4,19 +4,20 @@
 
 import com.mchange.sysadmin.taskrunner.*
 
-val tr = new TaskRunner[Unit]
+val taskRunner = new TaskRunner[Unit]
+import taskRunner.*
 
-val task = new tr.Task:
+val task = new Task:
   val name = "Snapshot"
   val init = ()
   val bestEffortSetups = Set(
-    tr.exec("Memory use snapshot", List("free", "-h")),
-    tr.exec("Storage snapshot", List("df","-h"))
+    Step.Exec("Memory use snapshot", List("free", "-h")),
+    Step.Exec("Storage snapshot", List("df","-h"))
   )
   val sequential = Nil
   val bestEffortFollowups = Set.empty
 
 val reporters = Reporters.default()
 
-tr.runAndReport(task,reporters)
+runAndReport(task,reporters)
 

@@ -5,23 +5,20 @@
 import com.mchange.sysadmin.taskrunner.*
 import com.interfluidity.officehours.*
 
-val tr = TaskRunner[Unit]
+val taskRunner = TaskRunner[Unit]
+import taskRunner.*
 
-val task = new tr.Task:
+val task = new Task:
   val name = "Weekly office hours setup"
   val init = ()
   val bestEffortSetups = Set.empty
-  val action : (Unit, tr.Step.Arbitrary) => tr.Step.Result = ( _ : Unit, self : tr.Step.Arbitrary ) =>
-    createAndSendThisWeeksNote()
-    tr.Step.Result.emptyWithCarryForward( () )
-  val sequential = List(
-    tr.arbitrary(
-      name = "Create notes and send weekly mail",
-      action = action
-    )
-  )
+  val singleStep =
+    Step.Arbitrary("Create notes and send weekly mail"): ( prior, self ) =>
+      createAndSendThisWeeksNote()
+      Step.Result.onward( () )
+  val sequential = List( singleStep )
   val bestEffortFollowups = Set.empty
 
 val reporters = Reporters.default()
 
-tr.runAndReport(task,reporters)
+runAndReport(task,reporters)

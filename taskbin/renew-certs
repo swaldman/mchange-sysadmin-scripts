@@ -14,25 +14,26 @@
 import scala.collection.immutable
 import com.mchange.sysadmin.taskrunner.*
 
-val tr = TaskRunner[Unit]
+val taskRunner = TaskRunner[Unit]
+import taskRunner.*
 
-def itRan( completed : tr.Completed ) : Boolean =
+def itRan( completed : Completed ) : Boolean =
   val stdout = completed.result.stepOut
   stdout.contains("Certificate not yet due") || stdout.contains("Renewing an existing certificate")
 
-val task = new tr.Task:
+val task = new Task:
   val name = "Renew certs"
   val init = ()
   val bestEffortSetups = Set.empty
   val sequential = List(
-    tr.exec("Stop nginx", List("systemctl", "stop", "nginx")),
-    tr.exec("Renew certs", List("certbot", "renew", "--standalone", "--no-random-sleep-on-renew"), isSuccess = itRan),
+    Step.Exec("Stop nginx", List("systemctl", "stop", "nginx")),
+    Step.Exec("Renew certs", List("certbot", "renew", "--standalone", "--no-random-sleep-on-renew"), isSuccess = itRan),
   )
   val bestEffortFollowups = Set(
-    tr.exec("Restart nginx", List("systemctl","restart","nginx"))
+    Step.Exec("Restart nginx", List("systemctl","restart","nginx"), essential=Some(true)) // we want to know about it if ngnix doesn't restart!
   )
 
 val reporters = Reporters.default()
 
-tr.runAndReport(task,reporters)
+runAndReport(task,reporters)
 

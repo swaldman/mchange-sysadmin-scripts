@@ -15,11 +15,12 @@ class Zipper( baseName : String, siteDir : os.Path, zipDir : os.Path, zoneId : Z
   val TimestampFormatter = TimestampFormatterRaw.withZone( zoneId )
 
   def conditionallyZip =
-    val tr = TaskRunner[Pad]
+    val taskRunner = TaskRunner[Pad]
+    import taskRunner.*
 
     // sequential
     val ComputeLastZipTime =
-      def action( prior : Pad, thisStep : tr.Arbitrary ) : tr.Result =
+      Step.Arbitrary("Compute last zip time"): ( prior, thisStep ) =>
         if os.exists( zipDir ) then
           val timestamps =
             os.list( zipDir )
@@ -29,27 +30,25 @@ class Zipper( baseName : String, siteDir : os.Path, zipDir : os.Path, zoneId : Z
               }
           if timestamps.nonEmpty then
             val last = timestamps.max
-            tr.Result(None,"","",prior.copy( lastZipTime = Some(last) ), Some(s"Latest timestamp found in zip directory: ${last}"))
+            Result.onward(prior.copy( lastZipTime = Some(last) ), notes = Some(s"Latest timestamp found in zip directory: ${last}"))
           else
-            tr.Result(None,"","",prior.copy( lastZipTime = Some(Instant.MIN) ), Some("No timestamps found in zip directory"))
+            Result.onward(prior.copy( lastZipTime = Some(Instant.MIN) ), notes = Some("No timestamps found in zip directory"))
         else
-          tr.Result(None,"","",prior.copy( lastZipTime = Some(Instant.MIN) ), Some("No zip directory, so no prior zips found."))
-      tr.arbitrary("Compute last zip time", action )
+          Result.onward(prior.copy( lastZipTime = Some(Instant.MIN) ), notes = Some("No zip directory, so no prior zips found."))
 
     val ComputeLastUpdateTime =
-      def action( prior : Pad, thisStep : tr.Arbitrary ) : tr.Result =
+      Step.Arbitrary("Compute last update time"): ( prior, thisStep ) =>
         if os.exists( siteDir ) then
           val mtimes = os.walk.attrs( siteDir ).map( _(1).mtime.toInstant )
           if mtimes.nonEmpty then 
-            tr.Result(None,"","",prior.copy( lastUpdateTime = Some(mtimes.max) ), Some("Latest update found in site directory"))
+            Result.onward(prior.copy( lastUpdateTime = Some(mtimes.max) ), notes = Some("Latest update found in site directory"))
           else
-            tr.Result(None,"",s"Site dir '${siteDir}' is empty.", prior, Some(s"Site dir '${siteDir}' is empty, won't zip."))
+            Result(None,"",s"Site dir '${siteDir}' is empty.", prior, Some(s"Site dir '${siteDir}' is empty, won't zip."))
         else
-          tr.Result(None,"",s"Site dir '${siteDir}' does not exist.", prior, Some(s"Site dir '${siteDir}' does not exist, won't zip."))
-      tr.arbitrary("Compute last update time", action )
+          Result(None,"",s"Site dir '${siteDir}' does not exist.", prior, Some(s"Site dir '${siteDir}' does not exist, won't zip."))
 
     val CreateTmpDirIfZipping =
-      def action( prior : Pad, thisStep : tr.Arbitrary ) : tr.Result =
+      Step.Arbitrary("Create tmp directory if zipping"): ( prior, thisStep ) =>
         val mbShouldZip =
           for
             lastZip    <- prior.lastZipTime
@@ -59,48 +58,43 @@ class Zipper( baseName : String, siteDir : os.Path, zipDir : os.Path, zoneId : Z
         val shouldZip = mbShouldZip.getOrElse(false)
         if shouldZip then
           val tmpDir = os.temp.dir()
-          tr.Result(None,"","",prior.copy( tmpDir = Some(tmpDir) ), Some(s"We're gonna zip, made temporary directory: ${tmpDir}"))
+          Result.onward(prior.copy( tmpDir = Some(tmpDir) ), notes = Some(s"We're gonna zip, made temporary directory: ${tmpDir}"))
         else
-          tr.Result(None,"","",prior, Some("We're not zipping."))
-      tr.arbitrary("Create tmp directory if zipping", action )
+          Result.onward(prior, notes = Some("We're not zipping."))
 
     val Zip =
-      //tr.exec("Zipping site directory", List("zip", (prior.tmpDir.get / (baseName + TimestampFormatter.format(Instant.now()) + ".zip")).toString, prior.siteDir.get )
-      def action( prior : Pad, thisStep : tr.Arbitrary ) : tr.Result =
+      Step.Arbitrary("Zip site directory"): ( prior, thisStep ) =>
         if prior.tmpDir.nonEmpty then // we should zip!
           val fname = baseName + TimestampFormatter.format(Instant.now()) + ".zip"
           val zipfile = prior.tmpDir.get / fname
           os.zip( dest = zipfile, sources = Seq( Tuple2(siteDir,os.SubPath(baseName)) ), preserveMtimes = true, followLinks = false )
-          tr.Result(None,"","",prior, Some( s"Zipping ${siteDir} to $zipfile as $baseName." ))
+          Result.onward(prior, notes = Some( s"Zipping ${siteDir} to $zipfile as $baseName." ))
         else // no failures have occurred, but we should not zip  
-          tr.Result(None,"","",prior, Some( s"${siteDir} is unchanged since last zip, not zipping." ))
-      tr.arbitrary("Zip site directory", action )
+          Result.onward(prior, notes = Some( s"${siteDir} is unchanged since last zip, not zipping." ))
 
 
     val Copy =
-      def action( prior : Pad, thisStep : tr.Arbitrary ) : tr.Result =
+      Step.Arbitrary("Copy new zip into zip directory"): ( prior, thisStep ) =>
         if prior.tmpDir.nonEmpty then // we should copy!
           val tmpDir = prior.tmpDir.get
           if !os.exists( zipDir ) then
             os.makeDir.all( zipDir )
           os.copy( tmpDir, zipDir, mergeFolders = true )
-          tr.result( None,"","",prior,Some(s"""Copying ${os.list(tmpDir).mkString(", ")} into ${zipDir}."""))
+          Result.onward( prior, notes = Some(s"""Copying ${os.list(tmpDir).mkString(", ")} into ${zipDir}."""))
         else // no failures have occurred, but we should not zip  
-          tr.Result(None,"","",prior, Some( s"No new zip files need to be copied into ${zipDir}." ))
-      tr.arbitrary("Copy new zip into zip directory", action )
+          Result.onward(prior, notes = Some( s"No new zip files need to be copied into ${zipDir}." ))
 
     // clean ups
     val DeleteTmpDir =
-      def action( prior : Pad, thisStep : tr.Arbitrary ) : tr.Result =
+      Step.Arbitrary("Delete tmp directory"): ( prior, thisStep ) =>
         if prior.tmpDir.nonEmpty then
           val tmpDir = prior.tmpDir.get
           os.remove.all( tmpDir )
-          tr.result( None,"","",prior,Some(s"Removing ${tmpDir}") )
+          Result.onward( prior, notes=Some(s"Removing ${tmpDir}") )
         else  
-          tr.result( None,"","",prior,Some(s"No tmp directory was created, nothing to remove.") )
-      tr.arbitrary("Delete tmp directory", action )
+          Result.onward( prior, notes=Some(s"No tmp directory was created, nothing to remove.") )
 
-    val task = new tr.Task:
+    val task = new Task:
       val name = s"Zip site '${baseName}'"
       val init = Pad()
       val bestEffortSetups = Set.empty
@@ -117,7 +111,7 @@ class Zipper( baseName : String, siteDir : os.Path, zipDir : os.Path, zoneId : Z
     end task
 
     val reporters = Reporters.default()
-    tr.runAndReport(task, reporters)
+    runAndReport(task, reporters)
     println(s"Zip of ${baseName} and reporting of results complete.")
 
 

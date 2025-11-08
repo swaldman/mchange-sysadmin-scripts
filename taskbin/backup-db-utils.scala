@@ -27,57 +27,55 @@ abstract class BackupDbRunner:
 
     case class Pad( tmpDir : Option[os.Path] = None, backupFile : Option[os.Path] = None )
 
-    val tr = TaskRunner[Pad]
+    val taskRunner = TaskRunner[Pad]
+    import taskRunner.*
 
     // sequential
     val EnsureRcloneIfNecessary =
-      def action( prior : Pad, thisStep : tr.Arbitrary ) =
+      Step.Arbitrary(s"Ensure availability of rclone, if necessary", actionDescription = Some("rclone --version") ): ( prior, thisStep ) =>
         val out = if isRcloneDest then
-          tr.arbitraryExec( prior, thisStep, List("rclone", "--version"), tr.carryPrior )
+          arbitraryExec( prior, thisStep, List("rclone", "--version"), carryPrior )
         else
-          tr.Result.zeroWithCarryForward(prior)
+          Step.Result.zeroWithCarryForward(prior)
         out.copy( notes = Some(s"destpath: ${destpath}") )
-      tr.arbitrary(s"Ensure availability of rclone, if necessary", action ).copy( actionDescription = Some("rclone --version") )
 
     val CreateTempDir =
-      def action( prior : Pad, thisStep : tr.Arbitrary ) = tr.result( None, "", "", Pad(Some(os.temp.dir()), None) )
-      tr.arbitrary("Create Temp Dir", action ).copy( actionDescription = Some("os.temp.dir()") )
+      Step.Arbitrary("Create Temp Dir", actionDescription = Some("os.temp.dir()") ): ( prior, thisStep ) =>
+        Step.Result.onward( Pad(Some(os.temp.dir()), None) )
 
     val PerformBackup =
-      def action( prior : Pad, thisStep : tr.Arbitrary ) =
+      Step.Arbitrary(s"Perform ${displayDbName} Backup", actionDescription = Some( doBackupActionDescription )): ( prior, thisStep ) =>
         val tmpDir = prior.tmpDir.getOrElse( abortUnexpectedPriorState("Failed to find expected backup tmpDir in carryforward. Cannot perform backup.") )
         val backupFile = tmpDir / backupFileName
         val parsedCommand = computeDoBackupParsedCommand( args, backupFile ) // e.g. List("postgres-dump-all-to-file", backupFile.toString)        
         def carryForward( prior : Pad, exitCode : Int, stepIn : String, stepOut : String ) = prior.copy(backupFile=Some(backupFile))
-        tr.arbitraryExec( prior, thisStep, parsedCommand, carryForward ).withNotes( s"Backup size: ${friendlyFileSize(os.size(backupFile))}" )
-      tr.arbitrary(s"Perform ${displayDbName} Backup", action).copy( actionDescription = Some( doBackupActionDescription ) )
+        arbitraryExec( prior, thisStep, parsedCommand, carryForward ).withNotes( s"Backup size: ${friendlyFileSize(os.size(backupFile))}" )
+
 
     val CopyBackupToStorage =
-      def action( prior : Pad, thisStep : tr.Arbitrary ) =
+      Step.Arbitrary("Copy backup to storage", actionDescription = Some( s"'rclone mkdir' then 'rclone copy' or else 'mkdir' then 'cp'" ) ): ( prior, thisStep ) =>
         val backupFile = prior.backupFile.getOrElse( abortUnexpectedPriorState("Failed to find expected backupFile in carryforward. Cannot copy backup to storage.") )
         if isRcloneDest then
-          val tmpResult = tr.arbitraryExec( prior, thisStep, List("rclone","mkdir",fullDestPath), tr.carryPrior )
+          val tmpResult = arbitraryExec( prior, thisStep, List("rclone","mkdir",fullDestPath), carryPrior )
           if tmpResult.exitCode == Some(0) then
-            tr.arbitraryExec( prior, thisStep, List("rclone","copy",backupFile.toString,fullDestPath ), tr.carryPrior )
+            arbitraryExec( prior, thisStep, List("rclone","copy",backupFile.toString,fullDestPath ), carryPrior )
           else
             tmpResult
         else
-          val tmpResult = tr.arbitraryExec( prior, thisStep, List("mkdir","-p",fullDestPath), tr.carryPrior )
+          val tmpResult = arbitraryExec( prior, thisStep, List("mkdir","-p",fullDestPath), carryPrior )
           if tmpResult.exitCode == Some(0) then
-            tr.arbitraryExec( prior, thisStep, List("cp",backupFile.toString,fullDestPath ), tr.carryPrior )
+            arbitraryExec( prior, thisStep, List("cp",backupFile.toString,fullDestPath ), carryPrior )
           else
             tmpResult
-      tr.arbitrary("Copy backup to storage", action ).copy( actionDescription = Some( s"'rclone mkdir' then 'rclone copy' or else 'mkdir' then 'cp'" ) )
 
     // cleanups
     val RemoveLocalBackup =
-      def action( prior : Pad, thisStep : tr.Arbitrary ) =
+      Step.Arbitrary("Remove temporary local backup.", actionDescription = Some( s"os.remove( <backup-file> )" ) ): ( prior, thisStep ) =>
         val target = prior.backupFile.getOrElse( abortUnexpectedPriorState("No backup file recorded. Could not remove backup file to clean up.") )
         os.remove( target )
-        tr.Result.emptyWithCarryForward(prior)
-      tr.arbitrary("Remove temporary local backup.", action ).copy( actionDescription = Some( s"os.remove( <backup-file> )" ) )
+        Step.Result.onward(prior)
 
-    val task = new tr.Task:
+    val task = new Task:
       val name = s"Backup ${displayDbName}, all databases"
       val init = Pad()
       val bestEffortSetups = Set.empty
@@ -93,5 +91,5 @@ abstract class BackupDbRunner:
     end task
 
     val reporters = Reporters.default()
-    tr.runAndReport(task, reporters)
+    runAndReport(task, reporters)
     println(s"Backup of ${displayDbName} and reporting of results complete.")
