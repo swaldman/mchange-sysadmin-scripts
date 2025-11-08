@@ -217,8 +217,6 @@ It's a tradeoff of space vs a small amount of additional security.
 
 ## Contributing
 
-Consider forking and maintaining a branch for your own additions and customizations.
-
 Pull requests that include additions that might be broadly useful &mdash; or enhancements of or fixes to what is already here &mdash;
 would be greatly appreciated.
 
